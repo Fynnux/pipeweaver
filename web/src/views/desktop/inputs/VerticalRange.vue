@@ -43,7 +43,7 @@ export default {
     selectedColour: {type: String, required: false, default: '#FFFFFF'},
     deselectedColour: {type: String, required: false, default: '#FFFFFF'},
     
-    mixBgColor: {type: String, required: false, default: Theme['mix-background']},
+    theme: {type: Object, required: false, default: Theme},
 
     // The value to report to Screen Readers
     ariaValue: {type: String, required: true},
@@ -232,8 +232,10 @@ export default {
       :min="minValue"
       :step="step"
 
-      type="range"
-    />
+      type="range">
+
+      <div class="vol-label">{{ localFieldValue }}%</div>
+  </input>
 
   </div>
 </template>
@@ -250,10 +252,26 @@ canvas {
   left: 50%;
   transform: translate(-50%, 0);
 
-  border-radius: 15px;
+  border-radius: 12px;
   width: v-bind(calc_width);
   height: 100%;
   z-index: 10;
+  pointer-events: none;
+}
+
+.vol-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  z-index: 20;
+  font-size: 12px;
+  font-weight: 800;
+  color: v-bind("theme.text");
+  background: v-bind("theme.mix_background");
+  border-radius: 8px;
+  padding: 2px 6px;
+
   pointer-events: none;
 }
 
@@ -275,7 +293,7 @@ input[type='range'] {
   width: v-bind(calc_height);
   cursor: pointer;
   outline: none;
-  border-radius: 15px;
+  border-radius: 12px;
 
   margin: 0;
 
@@ -294,7 +312,7 @@ input[type='range']::-webkit-slider-thumb {
   border-radius: 8px;
   border: none;
 
-  outline: 4px solid v-bind(mixBgColor);
+  outline: 4px solid v-bind("theme.mix_background");
 
   transition: 0.2s ease-in-out;
 }

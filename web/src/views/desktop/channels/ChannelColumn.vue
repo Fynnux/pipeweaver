@@ -487,7 +487,7 @@ export default {
 .mix {
   height: 100%;
   width: v-bind(calcMixerWidth);
-  background: var(--mix-background);
+  background: var(--mix_background);
   border: var(--border);
   border-radius: 6px;
 

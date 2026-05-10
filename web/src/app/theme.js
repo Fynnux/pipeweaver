@@ -8,9 +8,10 @@ export const Theme = {
   // main theme colors
   panel: "#141720",
   bg: "#101117",
-  "mix-background": "#1D212E",
-
+  mix_background: "#1D212E",
   border: "1px solid rgba(100, 100, 100, 0.25)",
+
+  text: "#cacaca",
 
   button: "#899DE7",
   button_hover: "#a2b3f0",

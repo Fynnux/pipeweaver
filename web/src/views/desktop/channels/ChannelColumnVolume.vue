@@ -25,7 +25,7 @@ export default {
       this.localFieldValue = parseInt(e.target.value)
     },
     getHeight() {
-      return this.height - 10;
+      return this.height;
     }
   },
 
@@ -66,7 +66,6 @@ export default {
         @change="change"
       />
     </div>
-    <div class="range-label">{{ localFieldValue }}%</div>
   </div>
 
 
@@ -74,16 +73,9 @@ export default {
 
 <style scoped>
 .range {
-
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.range-label {
-  color: #6e7676;
-  padding-top: 2px;
-  width: 32px;
-  text-align: center;
-}
 </style>

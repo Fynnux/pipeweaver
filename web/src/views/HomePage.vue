@@ -129,6 +129,7 @@ async function switchTab(tab) {
   color: v-bind("Theme.button_text");
   cursor: pointer;
   font-size: 14px;
+  font-weight: 800;
   transition: all 0.2s ease;
 
   border-radius: 8px;
