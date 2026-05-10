@@ -18,6 +18,8 @@ export default {
   props: {
     height: {type: Number, required: true, default: 120},
 
+    customWidth: {type: Number, required: false, default: 32},
+
     // Minimum Value for the Slider
     minValue: {type: Number, required: true, default: 0},
 
@@ -64,7 +66,7 @@ export default {
   methods: {
     calc_position: function () {
       // Half outer width minus half range width
-      return this.height - (16 / 2 - 6 / 2) - 2
+      return this.height
     },
 
     hexToRgb: function (hex) {
@@ -167,6 +169,9 @@ export default {
     calc_height() {
       return this.height + 'px'
     },
+    calc_width() {
+      return this.customWidth + 'px'
+    },
     calc_transform() {
       return `rotate(-90deg) translateY(-${this.calc_position()}px)`
     },
@@ -226,7 +231,7 @@ export default {
 <style scoped>
 .outer {
   position: relative;
-  width: 20px;
+  width: 32px;
   height: v-bind(calc_height);
 }
 
@@ -236,7 +241,7 @@ canvas {
   transform: translate(-50%, 0);
 
   border-radius: 15px;
-  width: 6px;
+  width: v-bind(calc_width);
   height: 100%;
   z-index: 10;
   pointer-events: none;
@@ -264,7 +269,7 @@ input[type='range'] {
 
   margin: 0;
 
-  height: 6px;
+  height: v-bind(calc_width);
 }
 
 /* Thumb: webkit */

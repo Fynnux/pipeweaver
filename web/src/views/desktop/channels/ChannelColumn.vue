@@ -42,7 +42,9 @@ export default {
 
   mounted() {
     this.$nextTick(() => {
-      this.calculateHeight();
+      requestAnimationFrame(() => {
+        this.calculateHeight();
+      });
       window.addEventListener('resize', this.onResize)
     })
   },
@@ -225,6 +227,17 @@ export default {
       return (device.mute_states.mute_targets[target].length === 0);
     },
 
+    onWheel: function (event) {
+      event.preventDefault();
+      const delta = event.deltaY > 0 ? -1 : 1;
+      const step = 5;
+      const currentVolume = this.getVolume();
+      const newValue = Math.max(0, Math.min(100, currentVolume + delta * step));
+      
+      this.volume_changed('A', true, { target: { value: newValue } });
+      this.volume_changed('B', false, { target: { value: newValue } });
+    },
+
     mute_click: function (target, e) {
       /*
         AddSourceMuteTarget(Ulid, MuteTarget),
@@ -403,10 +416,11 @@ export default {
           :current-value="getVolume()"
           :height="this.slider_height"
           :colour2="Theme.meter_base"
-          @change="event => volume_changed('A', false, event)"
-          @input="event => volume_changed('A', true, event)"
+          @change="event => { volume_changed('A', false, event); volume_changed('B', false, event) }"
+          @input="event => { volume_changed('A', true, event); volume_changed('B', false, event) }"
+          @wheel="onWheel"
         />
-        <ChannelColumnVolume
+        <!-- <ChannelColumnVolume
           v-if="hasMix()"
           :id="this.id"
           :current-value="getMixVolume()"
@@ -416,18 +430,18 @@ export default {
 
           @change="event => volume_changed('B', false, event)"
           @input="event => volume_changed('B', true, event)"
-        />
+        /> -->
       </div>
     </div>
-    <div v-if="hasMix()" class="link" @click="toggleLinked">
+    <!-- <div v-if="hasMix()" class="link" @click="toggleLinked">
       <img v-if="isLinked()" alt="Linked" src="/images/submix/linked-white.png"/>
       <img v-else alt="Unlinked" src="/images/submix/unlinked-dimmed.png"/>
-    </div>
+    </div> -->
     <div class="bottom"></div>
     <div v-if="hasMute()" class="mute">
-      <div v-if="!hasMix()">
+      <!-- <div v-if="!hasMix()">
         <MixAssignment :is-mix-a="isActiveMix('A')" @target-change="target_change"/>
-      </div>
+      </div> -->
 
       <div v-if="hasBasicMute()" :class="{active: isMuteA()}" class="buttons">
         <button @click="event => mute_click('A', event)">
@@ -435,8 +449,7 @@ export default {
             <font-awesome-icon v-if="isMuteA()" :icon="['fas', 'volume-xmark']"/>
             <font-awesome-icon v-else :icon="['fas', 'volume-high']"/>
           </span>
-          <span v-if="isOutput()">Mute Channel</span>
-          <span v-else-if="isMutedAll('TargetA')">Mute to All</span>
+          <span v-if="isOutput() || isMutedAll('TargetA')">Mute</span>
           <span v-else>Mute to...</span>
         </button>
         <button v-if="!isOutput()" @click="e => output_clicked('mute_a', e)">
@@ -445,7 +458,7 @@ export default {
           </span>
         </button>
       </div>
-      <div v-if="hasComplexMute()" :class="{active: isMuteB()}" class="buttons">
+      <!-- <div v-if="hasComplexMute()" :class="{active: isMuteB()}" class="buttons">
         <button @click="event => mute_click('B', event)">
           <span style="width: 16px">
             <font-awesome-icon v-if="isMuteB()" :icon="['fas', 'volume-xmark']"/>
@@ -459,7 +472,7 @@ export default {
             <font-awesome-icon :icon="['fas', 'angle-down']"/>
           </span>
         </button>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -467,7 +480,7 @@ export default {
 <style scoped>
 .mix {
   height: 100%;
-  min-width: 150px;
+  width: 100px;
   background: var(--mix-background);
   border: var(--border);
   border-radius: 3px 3px 0 0;
