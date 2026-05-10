@@ -1,6 +1,7 @@
 import './assets/main.css'
 import {createApp} from 'vue'
 import App from './App.vue'
+import { Theme } from './app/theme'
 import vClickOutside from "click-outside-vue3";
 
 /* import the fontawesome core */
@@ -28,5 +29,11 @@ library.add(faVolumeHigh, faVolumeXmark, faAngleDown, faCircleCheck, faXmark, fa
 const app = createApp(App);
 app.component('font-awesome-icon', FontAwesomeIcon);
 app.use(vClickOutside)
+
+// apply theme colors
+const root = document.documentElement
+Object.entries(Theme).forEach(([name, value]) => {
+  root.style.setProperty(`--${name}`, value)
+})
 
 app.mount('#app');

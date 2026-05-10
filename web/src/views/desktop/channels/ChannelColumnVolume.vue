@@ -14,7 +14,7 @@ export default {
   props: {
     id: {type: String, required: true},
     height: {type: Number, required: false, default: 440},
-    customWidth: {type: Number, required: false, default: 32},
+    sliderWidth: {type: Number, required: false, default: 32},
     currentValue: {type: Number, required: true},
     colour1: {type: String, default: '#00ffff'},
     colour2: {type: String, default: '#252927'}
@@ -59,7 +59,7 @@ export default {
         :max-value="100"
         :min-value="0"
         :selected-colour="colour1"
-        :custom-width="customWidth"
+        :slider-width="sliderWidth"
         aria-description=""
         aria-label=""
         aria-value=""

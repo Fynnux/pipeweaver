@@ -11,6 +11,7 @@
  */
 import {websocket_meter} from "@/app/sockets.js";
 import meter_scheduler from "@/app/meter_scheduler.js";
+import {Theme} from "@/app/theme.js";
 
 export default {
   name: 'VerticalRange',
@@ -18,7 +19,7 @@ export default {
   props: {
     height: {type: Number, required: true, default: 120},
 
-    customWidth: {type: Number, required: false, default: 32},
+    sliderWidth: {type: Number, required: false, default: 32},
 
     // Minimum Value for the Slider
     minValue: {type: Number, required: true, default: 0},
@@ -41,6 +42,8 @@ export default {
     // Colours for the thumb and 'active' section, and the unselected colour
     selectedColour: {type: String, required: false, default: '#FFFFFF'},
     deselectedColour: {type: String, required: false, default: '#FFFFFF'},
+    
+    mixBgColor: {type: String, required: false, default: Theme['mix-background']},
 
     // The value to report to Screen Readers
     ariaValue: {type: String, required: true},
@@ -170,7 +173,7 @@ export default {
       return this.height + 'px'
     },
     calc_width() {
-      return this.customWidth + 'px'
+      return this.sliderWidth + 'px'
     },
     calc_transform() {
       return `rotate(-90deg) translateY(-${this.calc_position()}px)`
@@ -183,11 +186,18 @@ export default {
     currentWidth() {
       const width = ((this.localFieldValue - this.minValue) / (this.maxValue - this.minValue)) * 100
       return isNaN(width) ? '0%' : `${Math.max(0, Math.min(100, width))}%`
+    },
+
+    calc_thumb_width() {
+      return Math.round(this.sliderWidth * 1.5) + 'px'
+    },
+    calc_thumb_height() {
+      return Math.round(this.sliderWidth * 0.15) + 'px'
     }
   },
 
   mounted() {
-    this.meterColour = this.calcColour(95);
+    this.meterColour = this.calcColour(50);
 
     this.localFieldValue = this.currentValue
     this.meterContext = this.$refs.meter.getContext('2d', {
@@ -231,7 +241,7 @@ export default {
 <style scoped>
 .outer {
   position: relative;
-  width: 32px;
+  width: v-bind(calc_width);
   height: v-bind(calc_height);
 }
 
@@ -278,11 +288,13 @@ input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
 
-  height: 16px;
-  width: 16px;
+  height: v-bind(calc_thumb_width);
+  width: v-bind(calc_thumb_height);
   background: v-bind(selectedColour);
-  border-radius: 50%;
+  border-radius: 8px;
   border: none;
+
+  outline: 4px solid v-bind(mixBgColor);
 
   transition: 0.2s ease-in-out;
 }

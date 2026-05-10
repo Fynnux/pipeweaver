@@ -203,7 +203,7 @@ export default {
   display: flex;
   flex-direction: column;
   border: var(--border);
-  border-radius: 6px 6px 0 0;
+  border-radius: 6px;
   background-color: var(--panel);
 }
 
@@ -241,10 +241,9 @@ export default {
   all: unset;
   height: 20px;
   width: 20px;
-  color: #fff;
-  border: 1px solid #666666;
-  background-color: #353937;
-  border-radius: 5px;
+  color: #14275c;
+  background: #899DE7;
+  border-radius: 6px;
 }
 
 .mix-list .title .end button:hover {

@@ -35,6 +35,7 @@ export default {
       update_locked: false,
 
       slider_height: 100,
+      slider_width: 32,
 
       color_timeout: null,
     }
@@ -377,6 +378,10 @@ export default {
 
     topHeight: function () {
       return '4px'
+    },
+
+    calcMixerWidth: function () {
+      return this.slider_width * 3 + 'px';
     }
   },
 }
@@ -416,6 +421,7 @@ export default {
           :current-value="getVolume()"
           :height="this.slider_height"
           :colour2="Theme.meter_base"
+          :slider-width="this.slider_width"
           @change="event => { volume_changed('A', false, event); volume_changed('B', false, event) }"
           @input="event => { volume_changed('A', true, event); volume_changed('B', false, event) }"
           @wheel="onWheel"
@@ -480,10 +486,10 @@ export default {
 <style scoped>
 .mix {
   height: 100%;
-  width: 100px;
+  width: v-bind(calcMixerWidth);
   background: var(--mix-background);
   border: var(--border);
-  border-radius: 3px 3px 0 0;
+  border-radius: 6px;
 
   position: relative;
 
@@ -505,14 +511,14 @@ export default {
 .title {
   display: flex;
   flex-direction: row;
-  padding: 8px;
+  padding: 6px;
   text-align: center;
   font-weight: bold;
   background: v-bind(titleBackground);
 }
 
 .title .start {
-  width: 20px;
+  width: 16px;
 }
 
 .title .start:hover {

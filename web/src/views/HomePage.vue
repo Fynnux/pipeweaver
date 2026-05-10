@@ -5,6 +5,7 @@ import Mixer from "@/views/Mixer.vue";
 import ApplicationsList from "@/views/desktop/applications/ApplicationsList.vue";
 import {nextTick, ref} from "vue";
 import Settings from "@/views/Settings.vue";
+import {Theme} from "@/app/theme.js";
 
 const activeTab = ref('router');
 
@@ -68,7 +69,6 @@ async function switchTab(tab) {
 
   padding: 10px;
   overflow-x: auto;
-  border-bottom: 2px solid #3b413f;
 
   scrollbar-width: auto;
   scrollbar-color: #4a5150 #2a2e2d;
@@ -112,29 +112,34 @@ async function switchTab(tab) {
 
 .tabs {
   display: flex;
-  gap: 2px;
-  border-bottom: 2px solid #3b413f;
+  gap: 8px;
+  border-top: v-bind("Theme.border");
+  border-bottom: v-bind("Theme.border");
+  border-top-width: 2px;
+  border-bottom-width: 2px;
   flex-shrink: 0;
+
+  justify-content: center;
 }
 
 .tab {
   padding: 10px 20px;
-  background: #2a2e2d;
+  background: v-bind("Theme.button");
   border: none;
-  color: #9ca3a0;
+  color: v-bind("Theme.button_text");
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s ease;
+
+  border-radius: 8px;
 }
 
 .tab:hover {
-  background: #353a39;
-  color: #b8bfbc;
+  background: v-bind("Theme.button_hover");
 }
 
 .tab.active {
-  background: #4a5150;
-  color: #ffffff;
+  background: v-bind("Theme.button_hover");
 }
 
 .tab-content {
