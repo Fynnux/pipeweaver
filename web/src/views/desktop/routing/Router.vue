@@ -133,8 +133,8 @@ th {
 
 thead tr:not(.subHeader) th {
   text-transform: uppercase;
-  color: var(--cyan);
-  text-shadow: 0 0 4px var(--cyan);
+  color: var(--main_accent);
+  text-shadow: 0 0 4px var(--main_accent);
   letter-spacing: 0.20em;
   background-color: transparent;
   font-weight: bold;
@@ -174,8 +174,8 @@ tr th {
 
 .rotated {
   text-transform: uppercase;
-  color: var(--cyan);
-  text-shadow: 0 0 4px var(--cyan);
+  color: var(--main_accent);
+  text-shadow: 0 0 4px var(--main_accent);
   letter-spacing: 0.20em;
   background-color: transparent;
   font-weight: bold;

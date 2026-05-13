@@ -124,7 +124,7 @@ async function switchTab(tab) {
 
 .tab {
   padding: 10px 20px;
-  background: v-bind("Theme.button");
+  background: v-bind("Theme.main_accent");
   border: none;
   color: v-bind("Theme.text_button");
   cursor: pointer;
@@ -136,11 +136,11 @@ async function switchTab(tab) {
 }
 
 .tab:hover {
-  background: v-bind("Theme.button_hover");
+  background: v-bind("Theme.main_accent_hover");
 }
 
 .tab.active {
-  background: v-bind("Theme.button_hover");
+  background: v-bind("Theme.main_accent_hover");
 }
 
 .tab-content {

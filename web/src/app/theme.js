@@ -1,6 +1,7 @@
 export const Theme = {
-  cyan: "#899de7",
-  cyan_meter: "#899de7",
+  main_accent: "#899de7", // volume sliders & buttons etc.
+  main_accent_hover: "#bbcfff",
+
   orange: "#fc9938",
   
   meter_base: "#2D3349",
@@ -13,7 +14,4 @@ export const Theme = {
 
   text: "#cacaca",
   text_button: "#14275c",
-
-  button: "#899de7",
-  button_hover: "#bbcfff"
 }

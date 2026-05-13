@@ -226,8 +226,8 @@ export default {
   padding-left: 10px;
 
   text-transform: uppercase;
-  color: var(--cyan);
-  text-shadow: 0 0 4px var(--cyan);
+  color: var(--main_accent);
+  text-shadow: 0 0 4px var(--main_accent);
 
   letter-spacing: 0.20em;
   flex: 1;

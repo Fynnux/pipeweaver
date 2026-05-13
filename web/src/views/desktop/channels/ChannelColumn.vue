@@ -198,7 +198,7 @@ export default {
       if (!this.hasMix() && this.isActiveMix("B")) {
         return Theme.orange;
       }
-      return Theme.cyan;
+      return Theme.main_accent;
     },
 
     volume_changed: function (mix, force, e) {
@@ -426,29 +426,10 @@ export default {
           @input="event => { volume_changed('A', true, event); volume_changed('B', false, event) }"
           @wheel="onWheel"
         />
-        <!-- <ChannelColumnVolume
-          v-if="hasMix()"
-          :id="this.id"
-          :current-value="getMixVolume()"
-          :height="this.slider_height"
-          :colour1="Theme.orange"
-          :colour2="Theme.meter_base"
-
-          @change="event => volume_changed('B', false, event)"
-          @input="event => volume_changed('B', true, event)"
-        /> -->
       </div>
     </div>
-    <!-- <div v-if="hasMix()" class="link" @click="toggleLinked">
-      <img v-if="isLinked()" alt="Linked" src="/images/submix/linked-white.png"/>
-      <img v-else alt="Unlinked" src="/images/submix/unlinked-dimmed.png"/>
-    </div> -->
     <div class="bottom"></div>
     <div v-if="hasMute()" class="mute">
-      <!-- <div v-if="!hasMix()">
-        <MixAssignment :is-mix-a="isActiveMix('A')" @target-change="target_change"/>
-      </div> -->
-
       <div v-if="hasBasicMute()" :class="{active: isMuteA()}" class="buttons">
         <button @click="event => mute_click('A', event)">
           <span style="width: 16px">
@@ -464,21 +445,6 @@ export default {
           </span>
         </button>
       </div>
-      <!-- <div v-if="hasComplexMute()" :class="{active: isMuteB()}" class="buttons">
-        <button @click="event => mute_click('B', event)">
-          <span style="width: 16px">
-            <font-awesome-icon v-if="isMuteB()" :icon="['fas', 'volume-xmark']"/>
-            <font-awesome-icon v-else :icon="['fas', 'volume-high']"/>
-          </span>
-          <span v-if="isMutedAll('TargetB')">Mute to All</span>
-          <span v-else>Mute to...</span>
-        </button>
-        <button @click="e => output_clicked('mute_b', e)">
-          <span ref="mute_b_icon" class="rotate">
-            <font-awesome-icon :icon="['fas', 'angle-down']"/>
-          </span>
-        </button>
-      </div> -->
     </div>
   </div>
 </template>
