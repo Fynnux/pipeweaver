@@ -126,7 +126,7 @@ async function switchTab(tab) {
   padding: 10px 20px;
   background: v-bind("Theme.button");
   border: none;
-  color: v-bind("Theme.button_text");
+  color: v-bind("Theme.text_button");
   cursor: pointer;
   font-size: 14px;
   font-weight: 800;
