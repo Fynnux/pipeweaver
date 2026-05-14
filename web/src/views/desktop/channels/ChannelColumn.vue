@@ -594,11 +594,11 @@ export default {
 }
 
 .mute {
-  background: v-bind(muteBackground);
+  background: var(--mix_background);
 
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  margin: 4px 2px 2px 2px;
 }
 
 .mute.small {
@@ -629,8 +629,7 @@ export default {
   overflow: hidden;
 
   border: var(--border);
-  border-left: 0;
-  border-right: 0;
+  border-radius: 6px;
 
   display: flex;
   align-items: center;
@@ -673,7 +672,7 @@ export default {
 
 .mute .buttons button span {
   display: inline-block;
-  margin: 6px 5px 6px 4px;
+  margin: 3px 3px 4px 4px;
 }
 
 .mute .buttons button span img {
@@ -695,19 +694,14 @@ export default {
   transition: transform 0.2s ease;
 }
 
-.mute .buttons div:first-child,
+/* .mute .buttons div:first-child,
 .mute .buttons button:first-child:not(:last-child) {
-  border-right: 1px solid #666;
-}
+  margin-right: 2px;
+} */
 
 .mute .buttons div:last-child,
 .mute .buttons button:last-child {
   padding-left: 4px;
   padding-right: 4px;
-}
-
-.mute :last-child > div,
-.mute :last-child > button {
-  border-bottom: 0;
 }
 </style>
