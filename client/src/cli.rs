@@ -73,6 +73,18 @@ pub enum NodeIdCommands {
         colour: Colour,
     },
     Remove,
+    GetVolume {
+        /// The Mix to query
+        mix: Option<Mix>,
+    },
+    VolumeInterval {
+        #[arg(value_parser, action = ArgAction::Set)]
+        change: String,
+        amount: u8,
+
+        /// The Mix to query
+        mix: Option<Mix>,
+    },
     SetVolume {
         /// Volume as a percentage (0-100)
         #[arg(value_parser = percent_value)]

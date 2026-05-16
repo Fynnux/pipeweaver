@@ -85,6 +85,46 @@ impl IPCHandler for PipewireManager {
                     bail!("Node name {} not Found", name);
                 }
             }
+            Cmd::GetVolumeByName(name, mix) => {
+                let mix = if let Some(mix) = mix { mix } else { Mix::A };
+
+                if let Some(id) = self.get_node_id_by_name(&name) {
+                    let volume = self.get_node_volume(id, mix)?;
+                    Ok(Resp::Volume(volume))
+                } else {
+                    bail!("Node name {} not Found", name);
+                }
+            }
+            Cmd::VolumeIntervalByName(name, change, amount, mix) => {
+                let mix = if let Some(mix) = mix { mix } else { Mix::A };
+
+                if let Some(id) = self.get_node_id_by_name(&name) {
+                    if let Some(node_type) = self.get_node_type(id) {
+                        let mut volume = self.get_node_volume(id, mix)?;
+                        if change == "up" {
+                            volume = volume + amount;
+                        } else if change == "down" {
+                            volume = volume - amount;
+                        }
+                        if matches!(
+                            node_type,
+                            NodeType::PhysicalSource | NodeType::VirtualSource
+                        ) {
+                            self.set_source_volume(id, mix, volume, true)
+                                .await
+                                .map(|_| Resp::Ok)
+                        } else {
+                            self.set_target_volume(id, volume, true)
+                                .await
+                                .map(|_| Resp::Ok)
+                        }
+                    } else {
+                        bail!("Node type for id {} not found", id);
+                    }
+                } else {
+                    bail!("Node name {} not Found", name);
+                }
+            }
 
             Cmd::SetSourceVolumeLinked(id, linked) => self
                 .set_source_volume_linked(id, linked)

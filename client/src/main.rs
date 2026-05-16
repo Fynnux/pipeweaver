@@ -57,6 +57,9 @@ async fn main() -> Result<()> {
                 PWCommandResponse::Id(e) => {
                     println!("Received: {}", e);
                 }
+                PWCommandResponse::Volume(v) => {
+                    println!("{}", v);
+                }
                 PWCommandResponse::Err(e) => bail!("{}", e),
             },
             _ => bail!("Unexpected Response"),
@@ -85,6 +88,8 @@ fn handle_node_command(cmd: cli::NodeCommands) -> DaemonRequest {
             IdCmd::SetColour { colour } => APICommand::SetNodeColourByName(src_name, colour),
             IdCmd::Remove => APICommand::RemoveNodeByName(src_name),
             IdCmd::SetVolume { mix, volume } => APICommand::SetVolumeByName(src_name, mix, volume),
+            IdCmd::GetVolume { mix } => APICommand::GetVolumeByName(src_name, mix),
+            IdCmd::VolumeInterval { change, amount, mix } => APICommand::VolumeIntervalByName(src_name, change, amount, mix),
             IdCmd::SetSourceVolumeLinked { linked } => {
                 APICommand::SetSourceVolumeLinkedByName(src_name, linked)
             }
