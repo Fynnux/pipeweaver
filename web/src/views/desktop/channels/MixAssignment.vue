@@ -26,7 +26,7 @@ export default {
     <!-- Sliding background -->
     <div
       :class="isMixA ? 'left' : 'right'"
-      :style="{ backgroundColor: isMixA ? Theme.main_accent : Theme.orange }"
+      :style="{ backgroundColor: isMixA ? 'var(--main-accent)' : 'var(--orange)' }"
       class="slider"
     ></div>
 

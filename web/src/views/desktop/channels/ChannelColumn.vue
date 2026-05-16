@@ -10,7 +10,6 @@ import MixAssignment from "@/views/desktop/channels/MixAssignment.vue";
 import PhysicalDeviceSelector from "@/views/desktop/channels/DevicePopup.vue";
 import DevicePopup from "@/views/desktop/channels/DevicePopup.vue";
 import ColourPicker from "@/views/desktop/components/ColourPicker.vue";
-import {Theme} from "@/app/theme.js";
 
 export default {
   name: 'ChannelColumn',
@@ -196,9 +195,9 @@ export default {
     getMixAColour: function () {
       // If the channel doesn't have a Mix B, check it's assigned mix
       if (!this.hasMix() && this.isActiveMix("B")) {
-        return Theme.orange;
+        return getComputedStyle(document.documentElement).getPropertyValue('--orange');
       }
-      return Theme.main_accent;
+      return getComputedStyle(document.documentElement).getPropertyValue('--main-accent');
     },
 
     volume_changed: function (mix, force, e) {
@@ -420,7 +419,7 @@ export default {
           :colour1="getMixAColour()"
           :current-value="getVolume()"
           :height="this.slider_height"
-          :colour2="Theme.meter_base"
+          :colour2="'var(--meter-base)'"
           :slider-width="this.slider_width"
           @change="event => { volume_changed('A', false, event); volume_changed('B', false, event) }"
           @input="event => { volume_changed('A', true, event); volume_changed('B', false, event) }"
@@ -453,7 +452,7 @@ export default {
 .mix {
   height: 100%;
   width: v-bind(calcMixerWidth);
-  background: var(--mix_background);
+  background: var(--mix-background);
   border: var(--border);
   border-radius: 6px;
 
@@ -594,7 +593,7 @@ export default {
 }
 
 .mute {
-  background: var(--mix_background);
+  background: var(--mix-background);
 
   display: flex;
   flex-direction: column;

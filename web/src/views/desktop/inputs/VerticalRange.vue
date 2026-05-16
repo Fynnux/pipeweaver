@@ -11,7 +11,6 @@
  */
 import {websocket_meter} from "@/app/sockets.js";
 import meter_scheduler from "@/app/meter_scheduler.js";
-import {Theme} from "@/app/theme.js";
 
 export default {
   name: 'VerticalRange',
@@ -42,8 +41,6 @@ export default {
     // Colours for the thumb and 'active' section, and the unselected colour
     selectedColour: {type: String, required: false, default: '#FFFFFF'},
     deselectedColour: {type: String, required: false, default: '#FFFFFF'},
-    
-    theme: {type: Object, required: false, default: Theme},
 
     // The value to report to Screen Readers
     ariaValue: {type: String, required: true},
@@ -267,8 +264,8 @@ canvas {
   z-index: 20;
   font-size: 12px;
   font-weight: 800;
-  color: v-bind("theme.text");
-  background: v-bind("theme.mix_background");
+  color: var(--text);
+  background: var(--mix-background);
   border-radius: 8px;
   padding: 2px 6px;
 
@@ -312,7 +309,7 @@ input[type='range']::-webkit-slider-thumb {
   border-radius: 8px;
   border: none;
 
-  outline: 4px solid v-bind("theme.mix_background");
+  outline: 4px solid var(--mix-background);
 
   transition: 0.2s ease-in-out;
 }

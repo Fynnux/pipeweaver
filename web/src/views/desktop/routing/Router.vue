@@ -41,10 +41,10 @@ export default {
     getCheckColour: function (target) {
       let dev = get_device_by_id(target.id);
       if (dev.mix === "B") {
-        return "#e07c24";
+        return getComputedStyle(document.documentElement).getPropertyValue('--orange');
       }
 
-      return "#59b1b6";
+      return getComputedStyle(document.documentElement).getPropertyValue('--main-accent');
     },
 
     getColour: function (target, opacity = 0.1) {
@@ -133,8 +133,8 @@ th {
 
 thead tr:not(.subHeader) th {
   text-transform: uppercase;
-  color: var(--main_accent);
-  text-shadow: 0 0 4px var(--main_accent);
+  color: var(--main-accent);
+  text-shadow: 0 0 4px var(--main-accent);
   letter-spacing: 0.20em;
   background-color: transparent;
   font-weight: bold;
@@ -174,8 +174,8 @@ tr th {
 
 .rotated {
   text-transform: uppercase;
-  color: var(--main_accent);
-  text-shadow: 0 0 4px var(--main_accent);
+  color: var(--main-accent);
+  text-shadow: 0 0 4px var(--main-accent);
   letter-spacing: 0.20em;
   background-color: transparent;
   font-weight: bold;

@@ -5,7 +5,6 @@ import Mixer from "@/views/Mixer.vue";
 import ApplicationsList from "@/views/desktop/applications/ApplicationsList.vue";
 import {nextTick, ref} from "vue";
 import Settings from "@/views/Settings.vue";
-import {Theme} from "@/app/theme.js";
 
 const activeTab = ref('router');
 
@@ -113,8 +112,8 @@ async function switchTab(tab) {
 .tabs {
   display: flex;
   gap: 8px;
-  border-top: v-bind("Theme.border");
-  border-bottom: v-bind("Theme.border");
+  border-top: var(--border);
+  border-bottom: var(--border);
   border-top-width: 2px;
   border-bottom-width: 2px;
   flex-shrink: 0;
@@ -124,9 +123,9 @@ async function switchTab(tab) {
 
 .tab {
   padding: 10px 20px;
-  background: v-bind("Theme.main_accent");
+  background: var(--main-accent);
   border: none;
-  color: v-bind("Theme.text_button");
+  color: var(--text-button);
   cursor: pointer;
   font-size: 14px;
   font-weight: 800;
@@ -136,11 +135,11 @@ async function switchTab(tab) {
 }
 
 .tab:hover {
-  background: v-bind("Theme.main_accent_hover");
+  background: var(--main-accent-hover);
 }
 
 .tab.active {
-  background: v-bind("Theme.main_accent_hover");
+  background: var(--main-accent-hover);
 }
 
 .tab-content {
