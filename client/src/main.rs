@@ -87,7 +87,16 @@ fn handle_node_command(cmd: cli::NodeCommands) -> DaemonRequest {
             IdCmd::Rename { name } => APICommand::RenameNodeByName(src_name, name),
             IdCmd::SetColour { colour } => APICommand::SetNodeColourByName(src_name, colour),
             IdCmd::Remove => APICommand::RemoveNodeByName(src_name),
-            IdCmd::SetVolume { mix, volume } => APICommand::SetVolumeByName(src_name, mix, volume),
+            IdCmd::SetVolume { mix, volume } => {
+                if volume.starts_with('+') || volume.starts_with('-') {
+                    let sign = if volume.starts_with('+') { "up" } else { "down" };
+                    let amt = volume[1..].parse::<u8>().unwrap_or(0);
+                    APICommand::VolumeIntervalByName(src_name, sign.to_string(), amt, mix)
+                } else {
+                    let v = volume.parse::<u8>().unwrap_or(0);
+                    APICommand::SetVolumeByName(src_name, mix, v)
+                }
+            }
             IdCmd::GetVolume { mix } => APICommand::GetVolumeByName(src_name, mix),
             IdCmd::VolumeInterval { change, amount, mix } => APICommand::VolumeIntervalByName(src_name, change, amount, mix),
             IdCmd::SetSourceVolumeLinked { linked } => {
@@ -156,7 +165,16 @@ fn handle_app_command(cmd: cli::AppCommands) -> DaemonRequest {
         ClearTransientRoute { process_id } => {
             APICommand::ClearTransientApplicationRoute(process_id)
         }
-        SetVolume { process_id, volume } => APICommand::SetApplicationVolume(process_id, volume),
+        SetVolume { process_id, volume } => {
+            if volume.starts_with('+') || volume.starts_with('-') {
+                let sign = if volume.starts_with('+') { "up" } else { "down" };
+                let amt = volume[1..].parse::<u8>().unwrap_or(0);
+                APICommand::SetApplicationVolumeInterval(process_id, sign.to_string(), amt)
+            } else {
+                let v = volume.parse::<u8>().unwrap_or(0);
+                APICommand::SetApplicationVolume(process_id, v)
+            }
+        }
         SetMute { process_id, muted } => APICommand::SetApplicationMute(process_id, muted),
     };
     DaemonRequest::Pipewire(api_cmd)

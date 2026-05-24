@@ -125,6 +125,7 @@ pub enum APICommand {
     ClearTransientApplicationRoute(u32),
 
     SetApplicationVolume(u32, u8),
+    SetApplicationVolumeInterval(u32, String, u8),
     SetApplicationMute(u32, bool),
 
     // Set the position of a node in the order tree

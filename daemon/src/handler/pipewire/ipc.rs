@@ -419,6 +419,24 @@ impl IPCHandler for PipewireManager {
                     .await
                     .map(|_| Resp::Ok)
             }
+            Cmd::SetApplicationVolumeInterval(id, change, amount) => {
+                if !self.application_nodes.contains_key(&id) {
+                    bail!("Invalid Application Specified");
+                }
+                let mut volume = if let Some(dev) = self.application_nodes.get(&id) {
+                    dev.volume
+                } else {
+                    bail!("Invalid Application Specified");
+                };
+                if change == "up" {
+                    volume = (volume.saturating_add(amount)).min(100);
+                } else if change == "down" {
+                    volume = volume.saturating_sub(amount);
+                }
+                self.set_application_volume(id, volume)
+                    .await
+                    .map(|_| Resp::Ok)
+            }
             Cmd::SetApplicationMute(id, state) => {
                 self.set_application_mute(id, state).await.map(|_| Resp::Ok)
             }

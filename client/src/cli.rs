@@ -86,9 +86,8 @@ pub enum NodeIdCommands {
         mix: Option<Mix>,
     },
     SetVolume {
-        /// Volume as a percentage (0-100)
-        #[arg(value_parser = percent_value)]
-        volume: u8,
+        /// Volume as a percentage (0-100) or relative (+N / -N)
+        volume: String,
 
         /// The Mix to be adjusted
         mix: Option<Mix>,
@@ -181,9 +180,8 @@ pub enum AppCommands {
     },
     SetVolume {
         process_id: u32,
-        /// Volume as a percentage (0-100)
-        #[arg(value_parser = percent_value)]
-        volume: u8,
+        /// Volume as a percentage (0-100) or relative (+N / -N)
+        volume: String,
     },
     SetMute {
         process_id: u32,
