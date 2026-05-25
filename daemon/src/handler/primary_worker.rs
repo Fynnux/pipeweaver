@@ -28,7 +28,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{env, fs};
 use tokio::sync::broadcast::Sender;
-use tokio::sync::{RwLock, mpsc, oneshot};
+use tokio::sync::{RwLock, mpsc, oneshot, watch};
 use tokio::time::sleep;
 use tokio::{select, task, time};
 use which::which;
@@ -36,10 +36,11 @@ use which::which;
 type Manage = mpsc::Sender<ManagerMessage>;
 
 pub struct PrimaryWorker {
-    last_status: DaemonStatus,
+    last_status: Option<DaemonStatus>,
 
     patch_broadcast: Sender<PatchEvent>,
     meter_broadcast: Sender<MeterEvent>,
+    manager_alive: watch::Sender<bool>,
 
     shutdown: Stop,
     settings: Arc<RwLock<GlobalSettings>>,
@@ -50,12 +51,14 @@ impl PrimaryWorker {
         shutdown: Stop,
         patch: Sender<PatchEvent>,
         meter: Sender<MeterEvent>,
+        manager_alive: watch::Sender<bool>,
         settings: Arc<RwLock<GlobalSettings>>,
     ) -> Self {
         Self {
-            last_status: DaemonStatus::default(),
+            last_status: None,
             patch_broadcast: patch,
             meter_broadcast: meter,
+            manager_alive,
 
             shutdown,
             settings,
@@ -71,10 +74,18 @@ impl PrimaryWorker {
         let mut first_run = true;
 
         'main: loop {
+            let _ = self.manager_alive.send(false);
+
             if !first_run {
                 // We need to wait a couple of seconds to make sure the teardown is complete
                 info!("[PrimaryWorker] Restarting Pipewire Manager in 2 seconds");
-                sleep(Duration::from_secs(2)).await;
+                select! {
+                    _ = sleep(Duration::from_secs(2)) => {}
+                    _ = self.shutdown.recv() => {
+                        info!("[PrimaryWorker] Stopping");
+                        break 'main;
+                    }
+                }
             } else {
                 first_run = false;
             }
@@ -105,11 +116,19 @@ impl PrimaryWorker {
             task::spawn(run_pipewire_manager(config, stop_sender));
 
             // Wait until the manager reports itself as ready
-            let _ = ready_receiver.await;
+            if let Err(e) = ready_receiver.await {
+                error!("[PrimaryWorker] Pipewire Manager failed to start: {}", e);
+                continue 'main;
+            }
+
+            debug!("[PrimaryWorker] Pipewire Manager Ready, Loading Initial Status");
 
             // Load the initial status
             self.update_status(&command_sender, true).await;
             let mut profile_changed = false;
+
+            // Set the manager as alive
+            let _ = self.manager_alive.send(true);
 
             loop {
                 select! {
@@ -126,9 +145,10 @@ impl PrimaryWorker {
                                 // We should fetch the 'latest' profile from the Pipeweaver runner
                                 self.update_status(&command_sender, false).await;
 
-                                let _ = self.save_profile(&profile_path, &self.last_status.audio.profile);
+                                if let Some(status) = &self.last_status {
+                                    let _ = self.save_profile(&profile_path, &status.audio.profile);
+                                }
                                 let _ = command_sender.send(ManagerMessage::Quit).await;
-                                continue 'main;
                             }
                             MessageResult::None => {}
                         }
@@ -146,17 +166,29 @@ impl PrimaryWorker {
                                 self.update_status(&command_sender, false).await;
                                 profile_changed = true;
                             }
+                            WorkerMessage::ManagerStopped => {
+                                // Something's stopped the manager, we need to restart it.
+                                info!("[PrimaryWorker] Pipewire Manager stopped");
+                                let _ = self.manager_alive.send(false);
+
+                                continue 'main;
+                            }
                         }
                     }
 
                     _ = profile_tick.tick() => {
                         if profile_changed {
                             profile_changed = false;
-                            let _ = self.save_profile(&profile_path, &self.last_status.audio.profile);
+                            if let Some(status) = &self.last_status {
+                                    let _ = self.save_profile(&profile_path, &status.audio.profile);
+                            }
                         }
                     },
 
                     _ = self.shutdown.recv() => {
+                        // Stop the handlers
+                        let _ = self.manager_alive.send(false);
+
                         info!("[PrimaryWorker] Stopping");
                         info!("[PrimaryWorker] Stopping Pipewire Manager");
                         let _ = command_sender.send(ManagerMessage::Quit).await;
@@ -169,7 +201,9 @@ impl PrimaryWorker {
             }
         }
 
-        let _ = self.save_profile(&profile_path, &self.last_status.audio.profile);
+        if let Some(status) = &self.last_status {
+            let _ = self.save_profile(&profile_path, &status.audio.profile);
+        }
         info!("[PrimaryWorker] Stopped");
     }
 
@@ -179,7 +213,11 @@ impl PrimaryWorker {
 
         match message {
             DaemonMessage::GetStatus(tx) => {
-                let _ = tx.send(self.last_status.clone());
+                if let Some(status) = &self.last_status {
+                    let _ = tx.send(status.clone());
+                } else {
+                    let _ = tx.send(DaemonStatus::default());
+                }
             }
             DaemonMessage::RunDaemon(command, tx) => {
                 match command {
@@ -305,7 +343,7 @@ impl PrimaryWorker {
             }
         }
 
-        self.last_status = status;
+        self.last_status = Some(status);
     }
 
     fn load_profile(&self, path: &PathBuf) -> Profile {
@@ -353,12 +391,38 @@ impl PrimaryWorker {
 
         check_settings_path(path)?;
 
-        if path.exists() {
-            fs::remove_file(path).context("Unable to remove old Profile")?;
+        let mut tmp_file_name = path.to_path_buf();
+        tmp_file_name.set_extension("tmp");
+        if tmp_file_name.exists() {
+            debug!("Temporary file already exists? Removing.");
+            fs::remove_file(&tmp_file_name)?;
         }
 
-        let file = File::create(path)?;
-        serde_json::to_writer_pretty(file, profile)?;
+        debug!(
+            "Creating Temporary Save File: {:?}",
+            &tmp_file_name
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("UNKNOWN")
+        );
+        let temp_file = File::create(&tmp_file_name)?;
+        serde_json::to_writer_pretty(&temp_file, profile)?;
+
+        // Make sure the file is fully written before proceeding
+        temp_file.sync_all()?;
+
+        debug!(
+            "Save Complete and synced, renaming to {:?}",
+            path.file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("UNKNOWN")
+        );
+        if path.exists() {
+            fs::remove_file(path).unwrap_or_else(|e| {
+                warn!("Error Removing File: {}", e);
+            });
+        }
+        fs::rename(tmp_file_name, path)?;
 
         info!("[Profile] Saved");
         Ok(())
@@ -522,6 +586,7 @@ pub enum ManagerMessage {
 pub enum WorkerMessage {
     TransientChange,
     ProfileChanged,
+    ManagerStopped,
 }
 
 pub async fn start_primary_worker(
@@ -529,9 +594,11 @@ pub async fn start_primary_worker(
     shutdown: Stop,
     broadcast_tx: Sender<PatchEvent>,
     meter_tx: Sender<MeterEvent>,
+    manager_alive_tx: watch::Sender<bool>,
     config_path: PathBuf,
     settings: Arc<RwLock<GlobalSettings>>,
 ) {
-    let mut manager = PrimaryWorker::new(shutdown, broadcast_tx, meter_tx, settings);
+    let mut manager =
+        PrimaryWorker::new(shutdown, broadcast_tx, meter_tx, manager_alive_tx, settings);
     manager.run(message_receiver, config_path).await;
 }

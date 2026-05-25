@@ -7,7 +7,7 @@ use crate::handler::pipewire::components::load_profile::LoadProfile;
 use crate::handler::pipewire::components::physical::PhysicalDevices;
 use crate::handler::pipewire::components::volume::VolumeManager;
 use crate::handler::pipewire::ipc::IPCHandler;
-use crate::handler::primary_worker::WorkerMessage::TransientChange;
+use crate::handler::primary_worker::WorkerMessage::{ManagerStopped, TransientChange};
 use crate::handler::primary_worker::{ManagerMessage, WorkerMessage};
 use crate::servers::http_server::MeterEvent;
 use enum_map::{EnumMap, enum_map};
@@ -222,7 +222,19 @@ impl PipewireManager {
         let receiver = thread::spawn(|| run_receiver_wrapper(recv, send_async));
 
         // Run up the Pipewire Handler
-        self.pipewire = Some(PipewireRunner::new(send.clone()).unwrap());
+        let pipewire = PipewireRunner::new(send.clone());
+        self.pipewire = match pipewire {
+            Ok(pipewire) => Some(pipewire),
+            Err(e) => {
+                error!("Error Connecting to Pipewire: {}", e);
+
+                // Stop the receiver wrapper
+                let _ = send_sync.send(PipewireReceiver::Quit);
+                let _ = receiver.join();
+
+                return;
+            }
+        };
 
         // Hold until we receive a clock value
         let mut loaded_profile = false;
@@ -244,6 +256,8 @@ impl PipewireManager {
         // Pull out the Meter Receiver
         let mut meter_receiver = self.meter_receiver.take().unwrap();
         let mut meter_buffer: Vec<(Ulid, u8)> = Vec::with_capacity(64);
+
+        let mut pipewire_exited = false;
 
         loop {
             select!(
@@ -318,6 +332,12 @@ impl PipewireManager {
                     }
 
                     match msg {
+                        PipewireReceiver::Exited => {
+                            // The pipewire connection has apparently gone, we need to stop
+                            pipewire_exited = true;
+                            break;
+                        }
+
                         PipewireReceiver::AnnouncedClock(_) => {
                             warn!("This shouldn't happen twice!");
                         }
@@ -670,13 +690,17 @@ impl PipewireManager {
             );
         }
         info!("[Manager] Stopping Pipewire");
-        let _ = self.pipewire().send_message(PipewireMessage::Quit);
+        let _ = self
+            .pipewire()
+            .send_message(PipewireMessage::Quit(!pipewire_exited));
         let runtime = self.pipewire.take();
         drop(runtime);
 
         info!("[Manager] Stopping Message Wrapper");
         let _ = send_sync.send(PipewireReceiver::Quit);
         let _ = receiver.join();
+
+        let _ = self.worker_sender.send(ManagerStopped).await;
 
         info!("[Manager] Stopped");
     }
