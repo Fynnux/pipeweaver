@@ -39,8 +39,20 @@ export default {
         {name: "Quantum128", label: "128"},
         {name: "Quantum256", label: "256"},
         {name: "Quantum512", label: "512"},
+        {name: "Quantum768", label: "768"},
         {name: "Quantum1024", label: "1024"},
+        {name: "Quantum1280", label: "1280"},
+        {name: "Quantum1536", label: "1536"},
+        {name: "Quantum1792", label: "1792"},
         {name: "Quantum2048", label: "2048"},
+        {name: "Quantum2304", label: "2304"},
+        {name: "Quantum2560", label: "2560"},
+        {name: "Quantum2816", label: "2816"},
+        {name: "Quantum3072", label: "3072"},
+        {name: "Quantum3328", label: "3328"},
+        {name: "Quantum3584", label: "3584"},
+        {name: "Quantum3840", label: "3840"},
+        {name: "Quantum4096", label: "4096"},
       ]
     },
 
@@ -120,14 +132,16 @@ export default {
     </div>
     <div>
       <div class="warning">
-        <div style="text-align: center; font-weight: bold;">Adjust Quantum Buffers</div>
+        <div style="text-align: center; font-weight: bold;">Audio Buffer Size</div>
         <div style="margin-bottom: 10px;">
-          The setting below will adjust the buffers pipewire uses when handling Pipeweaver
+          The setting below adjusts the buffer size PipeWire uses when processing Pipeweaver
           audio.<br/><br/>
-          The lower the setting, the higher the CPU and chance of cutouts and issues, the higher the
-          setting,
-          the more latency will be added to the audio. Changing this setting will restart the audio
-          engine.
+
+          Lower values reduce audio latency, but increase CPU usage and may result in audio cutouts
+          or other issues on some systems. Higher values improve stability at the cost of increased
+          audio latency.<br/><br/>
+
+          Changing this setting will restart the audio engine.
         </div>
         <div class="quantum">
           <div class="inner" @click="open_quantum_selector($event)">
