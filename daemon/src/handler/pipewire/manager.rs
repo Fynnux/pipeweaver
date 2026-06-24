@@ -24,6 +24,7 @@ use pipeweaver_shared::{AppTarget, DeviceType, Mix, PortDirection};
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
+use strum::IntoEnumIterator;
 use tokio::select;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -368,6 +369,9 @@ impl PipewireManager {
                                 name: node.name.clone(),
                                 description: node.description.clone(),
                                 is_usable: node.is_usable,
+                                volume: node.volume,
+                                muted: node.muted,
+
                                 ports: enum_map!{
                                     PortDirection::In => node.ports[Direction::In].iter().map(|port| PhysicalDevicePort {
                                         name: port.name.clone(),
@@ -405,6 +409,40 @@ impl PipewireManager {
                             self.device_nodes.insert(node.node_id, node);
                             if self.worker_sender.capacity() > 0 {
                                 let _ = self.worker_sender.send(TransientChange).await;
+                            }
+                        }
+                        PipewireReceiver::DeviceVolumeChanged(id, volume) => {
+                            if let Some(node) = self.device_nodes.get_mut(&id) {
+                                node.volume = volume;
+
+                                // Find the physical node associated with this and set its volume
+                                for device_type in DeviceType::iter() {
+                                    for device in self.node_list[device_type].iter_mut() {
+                                        if device.node_id == id {
+                                            device.volume = volume;
+                                        }
+                                    }
+                                }
+
+                                let _ = self.worker_sender.send(TransientChange).await;
+                                debug!("Volume Changed for Node {:?} ({}): {}", node.name, id, volume);
+                            }
+                        }
+                        PipewireReceiver::DeviceMuteChanged(id, muted) => {
+                            if let Some(node) = self.device_nodes.get_mut(&id) {
+                                node.muted = muted;
+
+                                // Find the physical node associated with this and set its volume
+                                for device_type in DeviceType::iter() {
+                                    for device in self.node_list[device_type].iter_mut() {
+                                        if device.node_id == id {
+                                            device.muted = muted;
+                                        }
+                                    }
+                                }
+
+                                let _ = self.worker_sender.send(TransientChange).await;
+                                debug!("Mute Changed for Node {:?} ({}): {}", node.name, id, muted);
                             }
                         }
                         PipewireReceiver::DeviceRemoved(id) => {
@@ -448,6 +486,9 @@ impl PipewireManager {
                                     name: dev.name.clone(),
                                     description: dev.description.clone(),
                                     is_usable: usable,
+
+                                    volume: dev.volume,
+                                    muted: false,
 
                                     ports: enum_map!{
                                         PortDirection::In => dev.ports[Direction::In].iter().map(|port| PhysicalDevicePort {

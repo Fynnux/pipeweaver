@@ -10,6 +10,7 @@ use crate::handler::pipewire::manager::PipewireManager;
 use crate::{APP_ID, APP_NAME};
 use anyhow::{Result, anyhow, bail};
 use enum_map::{EnumMap, enum_map};
+use log::debug;
 use pipeweaver_pipewire::oneshot;
 use pipeweaver_pipewire::{MediaClass, NodeProperties, PipewireMessage};
 use pipeweaver_profile::{
@@ -358,6 +359,9 @@ impl NodeManagementLocal for PipewireManager {
         self.link_create_filter_to_filter(desc.id, mix_a).await?;
         self.link_create_filter_to_filter(desc.id, mix_b).await?;
 
+        // Add this for mapping physical devices
+        self.physical_source.insert(desc.id, vec![]);
+
         // Create a map for this ID to the mixes
         self.source_map
             .insert(desc.id, enum_map! { Mix::A => mix_a, Mix::B => mix_b });
@@ -397,9 +401,22 @@ impl NodeManagementLocal for PipewireManager {
     }
 
     async fn node_create_physical_target(&mut self, desc: &DeviceDescription) -> Result<()> {
-        // A 'Physical' Target is just a volume filter by itself with the ID of the device
-        self.filter_volume_create_id(desc.name.clone(), desc.id)
-            .await?;
+        let node = self
+            .get_physical_target(desc.id)
+            .ok_or(anyhow!("Cannot Find Target"))?;
+
+        // If this node is supposed to sync with the attached devices, we'll create a passthrough
+        // node instead, otherwise create a volume filter.
+        if node.sync_with_devices {
+            self.filter_pass_create_id(desc.name.clone(), desc.id)
+                .await?;
+        } else {
+            // A 'Physical' Target is just a volume filter by itself with the ID of the device
+            self.filter_volume_create_id(desc.name.clone(), desc.id)
+                .await?;
+        }
+
+        self.physical_target.insert(desc.id, vec![]);
 
         let filter_name = format!("{}-meter", desc.name);
         let meter = self.filter_meter_create(desc.id, filter_name).await?;
