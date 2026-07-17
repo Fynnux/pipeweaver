@@ -199,9 +199,7 @@ impl PipewireManager {
 
             *AUDIO_CHANNELS => "2",
 
-            // Force the QUANTUM and the RATE to ensure that we're not internally adjusted when
-            // latency occurs following a link
-            *NODE_FORCE_QUANTUM => properties.buffer.to_string(),
+            // Force the RATE to match the system rate
             *NODE_FORCE_RATE => properties.rate.to_string(),
 
             // We don't want to set a driver here. If creating a large number of nodes each of them
@@ -225,6 +223,11 @@ impl PipewireManager {
                 false => "true"
             },
         };
+
+        // If a quantum is provided, send it in to the props
+        if let Some(quantum) = properties.buffer {
+            node_properties.insert(*NODE_FORCE_QUANTUM, quantum.to_string());
+        }
 
         debug!(
             "[{}] Attempting to Create Device '{}'",
@@ -766,7 +769,9 @@ impl PipewireManager {
         let mut store = self.store.borrow_mut();
         match link {
             LinkType::Node(id) => {
-                let node = store.managed_node_get(*id).unwrap();
+                let Some(node) = store.managed_node_get(*id) else {
+                    bail!("Unable to Locate Node");
+                };
 
                 let id = node.pw_id.unwrap();
                 let port = node.port_map[location].unwrap();

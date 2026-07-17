@@ -46,7 +46,7 @@ pub struct WebsocketResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DaemonCommand {
     SetAutoStart(bool),
-    SetAudioQuantum(Quantum),
+    SetAudioQuantum(Option<Quantum>),
     SetMetering(bool),
     SetUseBrowser(bool),
     OpenInterface,
@@ -127,6 +127,9 @@ pub enum APICommand {
     SetApplicationVolume(u32, u8),
     SetApplicationVolumeInterval(u32, String, u8),
     SetApplicationMute(u32, bool),
+
+    SetPhysicalDeviceVolume(Ulid, u8),
+    SetPhysicalDeviceMute(Ulid, bool),
 
     // Set the position of a node in the order tree
     SetOrderGroup(Ulid, OrderGroup),

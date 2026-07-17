@@ -35,6 +35,11 @@ pub(crate) trait PhysicalDevices {
 
     async fn add_device_to_node(&mut self, id: Ulid, node_id: u32) -> Result<()>;
     async fn remove_device_from_node(&mut self, id: Ulid, vec_index: usize) -> Result<()>;
+
+    async fn set_device_volume(&mut self, node_id: Ulid, volume: u8) -> Result<()>;
+    async fn set_device_mute(&mut self, node_id: Ulid, muted: bool) -> Result<()>;
+
+    fn locate_node(&self, descriptor: PhysicalDeviceDescriptor) -> Option<&DeviceNode>;
 }
 
 impl PhysicalDevices for PipewireManager {
@@ -491,18 +496,43 @@ impl PhysicalDevices for PipewireManager {
                 }
             }
             NodeType::PhysicalTarget => {
-                let device = self.get_physical_target_mut(id).ok_or(error)?;
-
                 let new_node = PhysicalDeviceDescriptor {
                     name: node.name.clone(),
                     description: node.description.clone(),
                 };
 
+                // We need to do sync checks, a device can't be attached to two
+                let err = anyhow!("Unable to Locate Node: {}", id);
+                let sync = self.get_physical_target(id).ok_or(err)?.sync_with_devices;
+                if sync {
+                    for device in &self.profile.devices.targets.physical_devices {
+                        if device.sync_with_devices && device.attached_devices.contains(&new_node) {
+                            bail!("Device is already attached to another sync device");
+                        }
+                    }
+                }
+
+                let device = self.get_physical_target_mut(id).ok_or(error)?;
                 if device.attached_devices.contains(&new_node) {
                     bail!("Device is already attached to this node");
                 }
 
                 device.attached_devices.push(new_node.clone());
+                if sync {
+                    // Adjust the volume if needed first..
+                    let volume = device.volume;
+                    let muted = match device.mute_state {
+                        MuteState::Muted => true,
+                        MuteState::Unmuted => false,
+                    };
+
+                    let message = PipewireMessage::SetDeviceVolume(node.node_id, volume);
+                    let _ = self.pipewire().send_message(message);
+
+                    let message = PipewireMessage::SetDeviceMute(node.node_id, muted);
+                    let _ = self.pipewire().send_message(message);
+                }
+
                 let pw_node = self.locate_node(new_node);
                 if let Some(node) = pw_node {
                     self.link_create_filter_to_unmanaged(id, node.node_id)
@@ -587,13 +617,39 @@ impl PhysicalDevices for PipewireManager {
 
         Ok(())
     }
-}
 
-trait PhysicalDevicesLocal {
-    fn locate_node(&self, descriptor: PhysicalDeviceDescriptor) -> Option<&DeviceNode>;
-}
+    async fn set_device_volume(&mut self, id: Ulid, volume: u8) -> Result<()> {
+        let node = self
+            .node_list
+            .values()
+            .flat_map(|devices| devices.iter())
+            .find(|device| device.id == id)
+            .map(|device| device.node_id);
 
-impl PhysicalDevicesLocal for PipewireManager {
+        if let Some(node_id) = node {
+            let message = PipewireMessage::SetDeviceVolume(node_id, volume);
+            self.pipewire().send_message(message)
+        } else {
+            bail!("Unable to locate Pipewire Node for Device: {}", id);
+        }
+    }
+
+    async fn set_device_mute(&mut self, id: Ulid, muted: bool) -> Result<()> {
+        let node = self
+            .node_list
+            .values()
+            .flat_map(|devices| devices.iter())
+            .find(|device| device.id == id)
+            .map(|device| device.node_id);
+
+        if let Some(node_id) = node {
+            let message = PipewireMessage::SetDeviceMute(node_id, muted);
+            self.pipewire().send_message(message)
+        } else {
+            bail!("Unable to locate Pipewire Node for Device: {}", id);
+        }
+    }
+
     fn locate_node(&self, descriptor: PhysicalDeviceDescriptor) -> Option<&DeviceNode> {
         if let Some(name) = descriptor.name {
             let node = self
@@ -615,3 +671,8 @@ impl PhysicalDevicesLocal for PipewireManager {
         None
     }
 }
+
+#[allow(unused)]
+trait PhysicalDevicesLocal {}
+
+impl PhysicalDevicesLocal for PipewireManager {}

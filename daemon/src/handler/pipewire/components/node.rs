@@ -655,6 +655,16 @@ impl NodeManagementLocal for PipewireManager {
             self.meter_map.remove(&id);
         }
 
+        // We need to detach any monitored nodes
+        let error = anyhow!("Unable to Locate Node: {}", id);
+        let device = self.get_virtual_target_mut(id).ok_or(error)?;
+        for device in device.attached_devices.clone() {
+            let pw_node = self.locate_node(device);
+            if let Some(node) = pw_node {
+                self.link_remove_node_to_unmanaged(id, node.node_id).await?;
+            }
+        }
+
         for (source, targets) in self.profile.routes.clone() {
             if targets.contains(&id) {
                 // Grab the A/B Mixes for this source
@@ -715,6 +725,8 @@ impl NodeManagementLocal for PipewireManager {
             .to_lowercase()
             .replace(" ", "_");
 
+        let buffer = self.profile.audio_node_quantum.map(|buffer| buffer.into());
+
         NodeProperties {
             node_id: desc.id,
             node_name: identifier.clone(),
@@ -726,7 +738,7 @@ impl NodeManagementLocal for PipewireManager {
             linger: false,
             class,
             managed_volume,
-            buffer: self.profile.audio_quantum.into(),
+            buffer,
             rate: self.clock_rate.unwrap_or(48000),
             ready_sender: None,
         }

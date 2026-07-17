@@ -852,8 +852,11 @@ impl Store {
         let device_nodes = self
             .unmanaged_devices
             .get(&device_id)
-            .map(|d| d.nodes.clone())
-            .unwrap_or_default();
+            .map(|d| d.nodes.clone());
+
+        let Some(device_nodes) = device_nodes else {
+            return;
+        };
 
         // First, try to match by profile_port
         for &node_id in &device_nodes {
@@ -873,11 +876,6 @@ impl Store {
         // Fallback: if the device only has one node, use it directly
         if device_nodes.len() == 1 {
             let node_id = device_nodes[0];
-            debug!(
-                "No profile_port match for device {} route_device {}, using sole node {} as fallback",
-                device_id, route_device, node_id
-            );
-
             if let Some(node) = self.unmanaged_device_nodes.get_mut(&node_id) {
                 node.volume = volume;
 
@@ -899,12 +897,16 @@ impl Store {
         let device_nodes = self
             .unmanaged_devices
             .get(&device_id)
-            .map(|d| d.nodes.clone())
-            .unwrap_or_default();
+            .map(|d| d.nodes.clone());
+
+        let Some(device_nodes) = device_nodes else {
+            return;
+        };
 
         // First, try to match by profile_port
         for &node_id in &device_nodes {
             if let Some(node) = self.unmanaged_device_nodes.get_mut(&node_id)
+                && node.muted != muted
                 && node.profile_port() == Some(route_device)
             {
                 node.muted = muted;
@@ -920,12 +922,9 @@ impl Store {
         // Fallback: if the device only has one node, use it directly
         if device_nodes.len() == 1 {
             let node_id = device_nodes[0];
-            debug!(
-                "No profile_port match for device {} route_device {}, using sole node {} as fallback",
-                device_id, route_device, node_id
-            );
-
-            if let Some(node) = self.unmanaged_device_nodes.get_mut(&node_id) {
+            if let Some(node) = self.unmanaged_device_nodes.get_mut(&node_id)
+                && node.muted != muted
+            {
                 node.muted = muted;
 
                 if node.sent_upstream {
@@ -1273,6 +1272,20 @@ impl Store {
     }
 
     pub fn unmanaged_node_set_volume(&mut self, id: u32, volume: u8) -> Result<()> {
+        let Some(node) = self.unmanaged_device_nodes.get(&id) else {
+            bail!("Node not found")
+        };
+
+        let Some(parent) = self
+            .unmanaged_devices
+            .values()
+            .find(|d| d.nodes.contains(&id))
+        else {
+            // No parent, set directly on the node
+            node.set_volume(volume);
+            return Ok(());
+        };
+
         let node_port = self
             .unmanaged_device_nodes
             .get(&id)
@@ -1283,16 +1296,10 @@ impl Store {
             return Ok(());
         };
 
-        let device = self
-            .unmanaged_devices
-            .values()
-            .find(|d| d.nodes.contains(&id))
-            .ok_or_else(|| anyhow!("No parent device for node {id}"))?;
-
         let linear_vol = (volume as f32 / 100.0).powi(3);
-        for (route_dev, route) in &device.active_routes {
+        for (route_dev, route) in &parent.active_routes {
             if route_dev == &node_profile_port {
-                device.set_volume(*route_dev, route.index, route.n_channels, linear_vol)?;
+                parent.set_volume(*route_dev, route.index, route.n_channels, linear_vol)?;
             }
         }
 
@@ -1300,6 +1307,20 @@ impl Store {
     }
 
     pub fn unmanaged_node_set_mute(&mut self, id: u32, muted: bool) -> Result<()> {
+        let Some(node) = self.unmanaged_device_nodes.get(&id) else {
+            bail!("Node not found")
+        };
+
+        let Some(parent) = self
+            .unmanaged_devices
+            .values()
+            .find(|d| d.nodes.contains(&id))
+        else {
+            // No parent, set directly on the node
+            node.set_mute(muted);
+            return Ok(());
+        };
+
         let node_port = self
             .unmanaged_device_nodes
             .get(&id)
@@ -1310,15 +1331,9 @@ impl Store {
             return Ok(());
         };
 
-        let device = self
-            .unmanaged_devices
-            .values()
-            .find(|d| d.nodes.contains(&id))
-            .ok_or_else(|| anyhow!("No parent device for node {id}"))?;
-
-        for (route_dev, route) in &device.active_routes {
+        for (route_dev, route) in &parent.active_routes {
             if route_dev == &node_profile_port {
-                device.set_mute(*route_dev, route.index, muted)?;
+                parent.set_mute(*route_dev, route.index, muted)?;
             }
         }
         Ok(())

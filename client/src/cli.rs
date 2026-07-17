@@ -202,6 +202,7 @@ pub enum DaemonCommands {
         #[arg(value_enum)]
         quantum: Quantum,
     },
+    ClearAudioQuantum,
     SetUseBrowser {
         #[arg(value_parser, action = ArgAction::Set)]
         enabled: bool,

@@ -8,7 +8,6 @@ use crate::handler::pipewire::components::routing::RoutingManagement;
 use crate::handler::pipewire::components::volume::VolumeManager;
 use crate::handler::pipewire::manager::PipewireManager;
 use anyhow::{Error, bail};
-use log::debug;
 use pipeweaver_ipc::commands::{APICommand, PWCommandResponse};
 use pipeweaver_shared::MuteState::{Muted, Unmuted};
 use pipeweaver_shared::{Mix, NodeType};
@@ -413,12 +412,11 @@ impl IPCHandler for PipewireManager {
                 .clear_application_transient_target(id)
                 .await
                 .map(|_| Resp::Ok),
-            Cmd::SetApplicationVolume(id, volume) => {
-                debug!("ERR?");
-                self.set_application_volume(id, volume)
-                    .await
-                    .map(|_| Resp::Ok)
-            }
+
+            Cmd::SetApplicationVolume(id, volume) => self
+                .set_application_volume(id, volume)
+                .await
+                .map(|_| Resp::Ok),
             Cmd::SetApplicationVolumeInterval(id, change, amount) => {
                 if !self.application_nodes.contains_key(&id) {
                     bail!("Invalid Application Specified");
@@ -439,6 +437,13 @@ impl IPCHandler for PipewireManager {
             }
             Cmd::SetApplicationMute(id, state) => {
                 self.set_application_mute(id, state).await.map(|_| Resp::Ok)
+            }
+
+            Cmd::SetPhysicalDeviceVolume(id, volume) => {
+                self.set_device_volume(id, volume).await.map(|_| Resp::Ok)
+            }
+            Cmd::SetPhysicalDeviceMute(id, muted) => {
+                self.set_device_mute(id, muted).await.map(|_| Resp::Ok)
             }
 
             Cmd::SetOrderGroup(id, group) => self.node_set_group(id, group).await.map(|_| Resp::Ok),

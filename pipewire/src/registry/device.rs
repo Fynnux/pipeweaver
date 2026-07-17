@@ -1,7 +1,6 @@
 use anyhow::{Result, bail};
 
 use crate::store::Store;
-use log::debug;
 use pipewire::device::{Device, DeviceChangeMask, DeviceListener};
 use pipewire::keys::{DEVICE_DESCRIPTION, DEVICE_NAME, DEVICE_NICK, OBJECT_SERIAL};
 use pipewire::registry::{GlobalObject, Registry};
@@ -137,8 +136,6 @@ pub fn handle_device(
     store: &mut Store,
     listener_store: Weak<RefCell<Store>>,
 ) {
-    //let mut store = listener_store.borrow_mut();
-
     if let Some(props) = global.props {
         let mut device = RegistryDevice::from(props);
         let bound: Option<Device> = registry.borrow().bind(global).ok();
@@ -160,8 +157,6 @@ pub fn handle_device(
                     }
                 })
                 .param(move |_seq, _type, _index, _next, param| {
-                    debug!("Device param fired, type: {:?}", _type);
-
                     let Some(pod) = param else { return };
                     let Ok((_, Value::Object(obj))) =
                         PodDeserializer::deserialize_any_from(pod.as_bytes())
@@ -199,8 +194,6 @@ pub fn handle_device(
                                 .find(|p| p.key == SPA_PROP_channelVolumes)
                                 && let Value::ValueArray(ValueArray::Float(vols)) = &p.value
                             {
-                                debug!("Recieved Props Changed: {:?}", p);
-
                                 n_channels = vols.len().max(1) as u32;
                                 current_volume = vols
                                     .iter()
