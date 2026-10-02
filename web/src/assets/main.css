@@ -15,7 +15,7 @@
      * The 'Monochromatic Color' sections of these pages give some clean brighter / darker colours
      */
   --border: 1px solid var(--border-colour);
-  --border-colour: #435e82;
+  --border-colour: rgba(100, 100, 100, 0.25);
 
   --border-subtle: 1px solid var(--border-subtle-colour);
   --border-subtle-colour: #324660;

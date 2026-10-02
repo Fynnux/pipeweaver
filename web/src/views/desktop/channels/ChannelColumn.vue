@@ -97,6 +97,16 @@ export default {
       return this.rgbToHex(color.red, color.green, color.blue);
     },
 
+    calculateHeight: function () {
+      if (!this.$refs.fader_container) {
+        // catches both null and undefined
+        return;
+      }
+
+      let base_height = this.$refs.fader_container.clientHeight;
+      this.slider_height = base_height - 30;
+    },
+
     getVolume: function () {
       if (!is_source(this.type)) {
         return this.getDevice().volume;
