@@ -1,41 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
 
 :root {
-    --bg: #101117;
-    --panel: #141720;
-    --mix-background: #1d212e;
-    --mix-button-background: linear-gradient(#1C242E, #131A22);
-    --mix-button-muted: linear-gradient(rgba(255, 0, 0, 0.2), rgba(255, 0, 0, 0.1));
-    --border: 1px solid rgba(100, 100, 100, 0.25);
-    --text: #cacaca;
-    --text-button: #14275c;
+  --bg: #101117;
+  --panel: #141720;
+  --mix-background: #1d212e;
+  --mix-button-background: linear-gradient(#1c242e, #131a22);
+  --mix-button-muted: linear-gradient(rgba(255, 0, 0, 0.2), rgba(255, 0, 0, 0.1));
 
-    --main-accent: #899de7;
-    --main-accent-hover: #bbcfff;
-    --orange: #FC9938;
-    --meter-base: #2D3349;
+  /*
+     * Reference for a lot of colours:
+     * Background: https://www.colorhexa.com/293a4f
+     * Lighter Stuff: https://www.colorhexa.com/0f151d
+     *
+     * The 'Monochromatic Color' sections of these pages give some clean brighter / darker colours
+     */
+  --border: 1px solid var(--border-colour);
+  --border-colour: #435e82;
 
-    --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --border-subtle: 1px solid var(--border-subtle-colour);
+  --border-subtle-colour: #324660;
 
-    color-scheme: dark;
+  --text: #cacaca;
+  --text-button: #14275c;
+
+  --main-accent: #899de7;
+  --main-accent-hover: #bbcfff;
+  --orange: #fc9938;
+  --meter-base: #2d3349;
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  color-scheme: dark;
 }
 
 body {
-    background-color: var(--bg);
-    font-family: var(--font-sans);
-    color: var(--text);
-    margin: 0;
-    padding: 0;
+  background-color: var(--bg);
+  font-family: var(--font-sans);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
 }
 
 #app {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-size: 0.8em;
-    user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 0.8em;
+  user-select: none;
 }
 
 body.dragging {
-    cursor: move !important;
+  cursor: move !important;
 }

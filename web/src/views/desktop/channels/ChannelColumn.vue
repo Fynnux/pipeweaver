@@ -1,24 +1,37 @@
 <script>
-import ColourSettings from '@/views/desktop/channels/ColourSettings.vue'
-import ChannelColumnVolume from '@/views/desktop/channels/ChannelColumnVolume.vue'
-import {DeviceOrderType, DeviceType, get_device_by_id, is_physical, is_source} from "@/app/util.js";
-import {websocket} from "@/app/sockets.js";
-import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import ColourSettings from "@/views/desktop/channels/ColourSettings.vue";
+import ChannelColumnVolume from "@/views/desktop/channels/ChannelColumnVolume.vue";
+import {
+  DeviceOrderType,
+  DeviceType,
+  get_device_by_id,
+  is_physical,
+  is_source,
+} from "@/app/util.js";
+import { websocket } from "@/app/sockets.js";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import PopupBox from "@/views/desktop/inputs/PopupBox.vue";
 import MuteTargetSelector from "@/views/desktop/channels/MuteTargetSelector.vue";
 import MixAssignment from "@/views/desktop/channels/MixAssignment.vue";
 import PhysicalDeviceSelector from "@/views/desktop/channels/DevicePopup.vue";
 import DevicePopup from "@/views/desktop/channels/DevicePopup.vue";
 import ColourPicker from "@/views/desktop/components/ColourPicker.vue";
+import FilterView from "@/views/desktop/filters/FilterView.vue";
+import { Theme } from "@/app/theme.js";
 
 export default {
-  name: 'ChannelColumn',
+  name: "ChannelColumn",
   components: {
+    FilterView,
     ColourPicker,
     DevicePopup,
     PhysicalDeviceSelector,
     MixAssignment,
-    MuteTargetSelector, PopupBox, FontAwesomeIcon, ChannelColumnVolume, ColourSettings
+    MuteTargetSelector,
+    PopupBox,
+    FontAwesomeIcon,
+    ChannelColumnVolume,
+    ColourSettings,
   },
   props: {
     type: DeviceType,
@@ -37,7 +50,7 @@ export default {
       slider_width: 32,
 
       color_timeout: null,
-    }
+    };
   },
 
   mounted() {
@@ -45,20 +58,15 @@ export default {
       requestAnimationFrame(() => {
         this.calculateHeight();
       });
-      window.addEventListener('resize', this.onResize)
-    })
+      window.addEventListener("resize", this.onResize);
+    });
   },
 
   beforeUnmount() {
-    window.removeEventListener('resize', this.onResize)
+    window.removeEventListener("resize", this.onResize);
   },
 
   methods: {
-    onResize: function () {
-      if (!this.$refs.fader_container) return;
-      this.calculateHeight();
-    },
-
     getDevice: function () {
       return get_device_by_id(this.id);
     },
@@ -73,8 +81,8 @@ export default {
       return {
         red: color.red,
         green: color.green,
-        blue: color.blue
-      }
+        blue: color.blue,
+      };
     },
 
     needsDevice: function () {
@@ -89,34 +97,25 @@ export default {
       return this.rgbToHex(color.red, color.green, color.blue);
     },
 
-    calculateHeight: function () {
-      if (!this.$refs.fader_container) {  // catches both null and undefined
-        return;
-      }
-
-      let base_height = this.$refs.fader_container.clientHeight;
-      this.slider_height = base_height - 30;
-    },
-
     getVolume: function () {
       if (!is_source(this.type)) {
         return this.getDevice().volume;
       }
 
-      return this.getDevice().volumes.volume.A
+      return this.getDevice().volumes.volume.A;
     },
     getMixVolume: function () {
       if (!is_source(this.type)) {
         return 0;
       }
-      return this.getDevice().volumes.volume.B
+      return this.getDevice().volumes.volume.B;
     },
 
     getMuteState: function () {
       if (is_source(this.type)) {
-        return this.getDevice().mute_states.mute_state
+        return this.getDevice().mute_states.mute_state;
       } else {
-        return this.getDevice().mute_state
+        return this.getDevice().mute_state;
       }
     },
 
@@ -124,11 +123,10 @@ export default {
       return !is_source(this.type);
     },
 
-
     isMuteA: function () {
       if (this.isOutput()) {
         let state = this.getMuteState();
-        return state === "Muted"
+        return state === "Muted";
       }
 
       let state = this.getMuteState();
@@ -144,7 +142,7 @@ export default {
       return this.getDevice().description.name;
     },
     hasMix: function () {
-      return is_source(this.type)
+      return is_source(this.type);
     },
     isLinked: function () {
       if (!this.hasMix()) {
@@ -156,10 +154,9 @@ export default {
       // SetSourceVolumeLinked(Ulid, bool),
       let new_state = !this.isLinked();
       let command = {
-        "SetSourceVolumeLinked": [this.getId(), new_state]
+        SetSourceVolumeLinked: [this.getId(), new_state],
       };
       websocket.send_command(command);
-
     },
     hasBasicMute: function () {
       return true;
@@ -169,19 +166,19 @@ export default {
     },
 
     hasMute: function () {
-      return this.hasComplexMute() || this.hasBasicMute()
+      return this.hasComplexMute() || this.hasBasicMute();
     },
 
     rgbToHex(r, g, b) {
-      return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)
+      return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
     },
 
     hexToRGB(hex) {
-      const hexStripped = hex.replace('#', '');
+      const hexStripped = hex.replace("#", "");
       return {
         red: parseInt(hexStripped.substring(0, 2), 16),
         green: parseInt(hexStripped.substring(2, 4), 16),
-        blue: parseInt(hexStripped.substring(4, 6), 16)
+        blue: parseInt(hexStripped.substring(4, 6), 16),
       };
     },
 
@@ -192,9 +189,9 @@ export default {
     getMixAColour: function () {
       // If the channel doesn't have a Mix B, check it's assigned mix
       if (!this.hasMix() && this.isActiveMix("B")) {
-        return getComputedStyle(document.documentElement).getPropertyValue('--orange');
+        return getComputedStyle(document.documentElement).getPropertyValue("--orange");
       }
-      return getComputedStyle(document.documentElement).getPropertyValue('--main-accent');
+      return getComputedStyle(document.documentElement).getPropertyValue("--main-accent");
     },
 
     volume_changed: function (mix, force, e) {
@@ -205,23 +202,23 @@ export default {
         let command = null;
         if (is_source(this.type)) {
           command = {
-            "SetSourceVolume": [this.getId(), mix, parseInt(e.target.value)]
+            SetSourceVolume: [this.getId(), mix, parseInt(e.target.value)],
           };
         } else {
           command = {
-            "SetTargetVolume": [this.getId(), parseInt(e.target.value)]
+            SetTargetVolume: [this.getId(), parseInt(e.target.value)],
           };
         }
 
         websocket.send_command(command).then(() => {
-          this.update_locked = false
+          this.update_locked = false;
         });
       }
     },
 
     isMutedAll(target) {
       let device = this.getDevice();
-      return (device.mute_states.mute_targets[target].length === 0);
+      return device.mute_states.mute_targets[target].length === 0;
     },
 
     onWheel: function (event) {
@@ -230,9 +227,9 @@ export default {
       const step = 5;
       const currentVolume = this.getVolume();
       const newValue = Math.max(0, Math.min(100, currentVolume + delta * step));
-      
-      this.volume_changed('A', true, { target: { value: newValue } });
-      this.volume_changed('B', false, { target: { value: newValue } });
+
+      this.volume_changed("A", true, { target: { value: newValue } });
+      this.volume_changed("B", false, { target: { value: newValue } });
     },
 
     mute_click: function (target, e) {
@@ -243,20 +240,20 @@ export default {
         SetTargetMuteState(Ulid, MuteState),
        */
 
-      let mute_target = (target === "A") ? "TargetA" : "TargetB";
+      let mute_target = target === "A" ? "TargetA" : "TargetB";
       let state = this.getMuteState();
 
       if (!is_source(this.type)) {
-        let new_status = (state === "Unmuted") ? "Muted" : "Unmuted";
+        let new_status = state === "Unmuted" ? "Muted" : "Unmuted";
         let command = {
-          "SetTargetMuteState": [this.getId(), new_status]
-        }
+          SetTargetMuteState: [this.getId(), new_status],
+        };
         websocket.send_command(command);
       } else {
-        let type = (!state.includes(mute_target)) ? "AddSourceMuteTarget" : "DelSourceMuteTarget";
+        let type = !state.includes(mute_target) ? "AddSourceMuteTarget" : "DelSourceMuteTarget";
         let command = {
           [type]: [this.getId(), mute_target],
-        }
+        };
         websocket.send_command(command);
       }
     },
@@ -264,19 +261,23 @@ export default {
     target_change: function (target, e) {
       // SetTargetMix(Ulid, Mix),
       let command = {
-        "SetTargetMix": [this.getId(), target]
+        SetTargetMix: [this.getId(), target],
       };
       websocket.send_command(command);
     },
 
     colour_clicked: function (e) {
-      this.$refs.colour.show(this.$refs['colour_section']);
+      this.$refs.colour.show(this.$refs["colour_section"]);
+    },
+
+    filter_clicked: function (e) {
+      this.$refs.filters.show(e);
     },
 
     colour_changed: function (value) {
       // We're going to abuse the color_dragging function here, and fake an event
       this.$refs.colour_picker.value = value;
-      this.color_dragging({target: {value: value}});
+      this.color_dragging({ target: { value: value } });
     },
 
     colour_show_native: function (e) {
@@ -299,8 +300,8 @@ export default {
       this.color_timeout = setTimeout(() => {
         // SetNodeColour(Ulid, Colour),
         let command = {
-          "SetNodeColour": [this.getId(), colorStruct]
-        }
+          SetNodeColour: [this.getId(), colorStruct],
+        };
         websocket.send_command(command);
         this.color_timeout = null;
       }, 250);
@@ -348,66 +349,90 @@ export default {
 
     is_source() {
       return is_source(this.type);
-    }
+    },
   },
   computed: {
     Theme() {
-      return Theme
+      return Theme;
     },
     colour: function () {
-      let colour = this.getColour()
-      return `rgb(${colour.red}, ${colour.green}, ${colour.blue})`
+      let colour = this.getColour();
+      return `rgb(${colour.red}, ${colour.green}, ${colour.blue})`;
     },
 
     titleBackground: function () {
       // Get the Screen colour..
-      let colour = this.getColour()
-      let base = `rgba(${colour.red}, ${colour.green}, ${colour.blue}, 0.1)`
-      return `linear-gradient(rgba(0,0,0,0), ${base})`
+      let colour = this.getColour();
+      let base = `rgba(${colour.red}, ${colour.green}, ${colour.blue}, 0.1)`;
+      return `linear-gradient(rgba(0,0,0,0), ${base})`;
     },
 
     muteBackground: function () {
-      let colour = this.getColour()
-      let base = `rgba(${colour.red}, ${colour.green}, ${colour.blue}, 0.3)`
-      return `linear-gradient(${base}, rgba(0,0,0,0))`
+      let colour = this.getColour();
+      let base = `rgba(${colour.red}, ${colour.green}, ${colour.blue}, 0.3)`;
+      return `linear-gradient(${base}, rgba(0,0,0,0))`;
     },
 
     topHeight: function () {
-      return '4px'
+      return "4px";
     },
 
     calcMixerWidth: function () {
-      return this.slider_width * 3 + 'px';
-    }
+      return this.slider_width * 3 + "px";
+    },
   },
-}
+};
 </script>
 
 <template>
-  <MuteTargetSelector v-if="is_source()" id="mute_a" ref="mute_a" :device_id='id'
-                      :type='type'
-                      target="TargetA" @closed="output_closed"/>
-  <MuteTargetSelector v-if="is_source()" id="mute_b" ref="mute_b" :device_id='id'
-                      :type='type' target="TargetB"
-                      @closed="output_closed"/>
+  <MuteTargetSelector
+    v-if="is_source()"
+    id="mute_a"
+    ref="mute_a"
+    :device_id="id"
+    :type="type"
+    target="TargetA"
+    @closed="output_closed"
+  />
+  <MuteTargetSelector
+    v-if="is_source()"
+    id="mute_b"
+    ref="mute_b"
+    :device_id="id"
+    :type="type"
+    target="TargetB"
+    @closed="output_closed"
+  />
 
-  <ColourPicker :id="`${id}_picker`" ref="colour" :colour-value="getColourHex()"
-                @closed="colour_closed" @colour-changed="colour_changed"
-                @preview-clicked="colour_show_native"/>
+  <ColourPicker
+    :id="`${id}_picker`"
+    ref="colour"
+    :colour-value="getColourHex()"
+    @closed="colour_closed"
+    @colour-changed="colour_changed"
+    @preview-clicked="colour_show_native"
+  />
+
+  <FilterView :id="id" ref="filters" />
 
   <div class="mix">
     <div class="title">
       <div class="start drag-handle">
-        <font-awesome-icon :icon="['fas', 'grip-vertical']"/>
+        <font-awesome-icon :icon="['fas', 'grip-vertical']" />
       </div>
       <div class="name">{{ getChannelName() }}</div>
       <div class="end" :class="{ glowing: needsDevice() }">
-        <DevicePopup id="select_device" :colour_callback="colour_clicked" :device_id="id"
-                     :order_group='order_group'
-                     :type='type'/>
+        <DevicePopup
+          id="select_device"
+          :colour_callback="colour_clicked"
+          :device_id="id"
+          :order_group="order_group"
+          :filter_callback="filter_clicked"
+          :type="type"
+        />
       </div>
     </div>
-    <input ref="colour_picker" class="colour_picker" type="color" @input="color_dragging"/>
+    <input ref="colour_picker" class="colour_picker" type="color" @input="color_dragging" />
     <div ref="colour_section" class="top" @click="colour_clicked"></div>
     <div ref="fader_container" class="faders">
       <div class="fader_child">
@@ -418,26 +443,36 @@ export default {
           :height="this.slider_height"
           :colour2="'var(--meter-base)'"
           :slider-width="this.slider_width"
-          @change="event => { volume_changed('A', false, event); volume_changed('B', false, event) }"
-          @input="event => { volume_changed('A', true, event); volume_changed('B', false, event) }"
+          @change="
+            (event) => {
+              volume_changed('A', false, event);
+              volume_changed('B', false, event);
+            }
+          "
+          @input="
+            (event) => {
+              volume_changed('A', true, event);
+              volume_changed('B', false, event);
+            }
+          "
           @wheel="onWheel"
         />
       </div>
     </div>
     <div class="bottom"></div>
     <div v-if="hasMute()" class="mute">
-      <div v-if="hasBasicMute()" :class="{active: isMuteA()}" class="buttons">
-        <button @click="event => mute_click('A', event)">
+      <div v-if="hasBasicMute()" :class="{ active: isMuteA() }" class="buttons">
+        <button @click="(event) => mute_click('A', event)">
           <span style="width: 16px">
-            <font-awesome-icon v-if="isMuteA()" :icon="['fas', 'volume-xmark']"/>
-            <font-awesome-icon v-else :icon="['fas', 'volume-high']"/>
+            <font-awesome-icon v-if="isMuteA()" :icon="['fas', 'volume-xmark']" />
+            <font-awesome-icon v-else :icon="['fas', 'volume-high']" />
           </span>
           <span v-if="isOutput() || isMutedAll('TargetA')">Mute</span>
           <span v-else>Mute to...</span>
         </button>
-        <button v-if="!isOutput()" @click="e => output_clicked('mute_a', e)">
+        <button v-if="!isOutput()" @click="(e) => output_clicked('mute_a', e)">
           <span ref="mute_a_icon" class="rotate">
-            <font-awesome-icon :icon="['fas', 'angle-down']"/>
+            <font-awesome-icon :icon="['fas', 'angle-down']" />
           </span>
         </button>
       </div>
@@ -509,7 +544,9 @@ export default {
   border-radius: 50%;
   background: rgb(255, 180, 0);
 
-  box-shadow: 0 0 4px rgba(255, 180, 0, 0.9), 0 0 8px rgba(255, 140, 0, 0.5);
+  box-shadow:
+    0 0 4px rgba(255, 180, 0, 0.9),
+    0 0 8px rgba(255, 140, 0, 0.5);
   border: 1px solid rgba(255, 180, 0, 0.9);
 
   animation: pulse 1.6s ease-out infinite;
@@ -540,7 +577,9 @@ export default {
   background-color: v-bind(colour);
   height: v-bind(topHeight);
   transform-origin: 0 0;
-  transition: transform 0.2s ease, filter 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
   will-change: transform, filter;
 }
 
@@ -554,14 +593,11 @@ export default {
   position: relative;
   padding: 15px;
   flex: 1;
+  display: flex;
+  justify-content: center;
 }
 
 .fader_child {
-  position: absolute;
-
-  left: 50%;
-  transform: translate(-50%, 0);
-
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -664,7 +700,6 @@ export default {
 .mute .buttons svg {
   opacity: 0.6;
 }
-
 
 .mute .buttons button span {
   display: inline-block;

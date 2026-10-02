@@ -2,6 +2,7 @@ use crate::handler::pipewire::components::application::{
     ApplicationManagement, get_application_type,
 };
 use crate::handler::pipewire::components::defaults::DefaultHandlers;
+use crate::handler::pipewire::components::filters::FilterManagement;
 use crate::handler::pipewire::components::links::LinkManagement;
 use crate::handler::pipewire::components::load_profile::LoadProfile;
 use crate::handler::pipewire::components::physical::PhysicalDevices;
@@ -20,7 +21,7 @@ use pipeweaver_pipewire::{
     PipewireReceiver, PipewireRunner,
 };
 use pipeweaver_profile::Profile;
-use pipeweaver_shared::{AppTarget, DeviceType, Mix, PortDirection};
+use pipeweaver_shared::{AppTarget, DeviceType, FilterConfig, Mix, PortDirection};
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
@@ -62,9 +63,23 @@ pub(crate) struct PipewireManager {
     meter_receiver: Option<mpsc::Receiver<(Ulid, u8)>>,
     meter_broadcast: broadcast::Sender<MeterEvent>,
 
+    // Custom filter configs
+    pub(crate) filter_config: HashMap<Ulid, FilterConfig>,
+
+    // These two define which nodes should be considered the start / end points for
+    // a route, this is so we can keep filter management isolated.
+    pub(crate) source_filter_end: HashMap<Ulid, Ulid>,
+
+    #[allow(unused)]
+    pub(crate) target_filter_start: HashMap<Ulid, Ulid>,
+
     // A list of physical nodes
     pub(crate) node_list: EnumMap<DeviceType, Vec<PhysicalDevice>>,
     pub(crate) device_nodes: HashMap<u32, DeviceNode>,
+
+    // For incoming physical sources, these filters bridge them to the pipeweaver tree without
+    // the devices themselves becoming attached, allowing them to maintain their own clocks.
+    pub(crate) bridged_filters: HashMap<u32, (Ulid, Ulid)>,
 
     // A list of application nodes
     pub(crate) application_nodes: HashMap<u32, ApplicationNode>,
@@ -100,8 +115,13 @@ impl PipewireManager {
             meter_receiver: Some(meter_rx),
             meter_broadcast: config.meter_sender,
 
+            filter_config: Default::default(),
+            source_filter_end: Default::default(),
+            target_filter_start: Default::default(),
+
             node_list: Default::default(),
             device_nodes: Default::default(),
+            bridged_filters: Default::default(),
 
             application_nodes: Default::default(),
             application_target_ignore: Default::default(),
@@ -118,6 +138,7 @@ impl PipewireManager {
     async fn get_audio_config(&self) -> AudioConfiguration {
         AudioConfiguration {
             profile: self.profile.clone(),
+            filter_config: self.filter_config.clone(),
             devices: self.node_list.clone(),
             defaults: enum_map! {
                 DeviceType::Source => match &self.default_source {
@@ -368,7 +389,7 @@ impl PipewireManager {
 
                             // Create the 'Status' object
                             let physical_node = PhysicalDevice {
-                                id: Ulid::new(),
+                                id: Ulid::generate(),
 
                                 node_id: node.node_id,
                                 name: node.name.clone(),
@@ -465,6 +486,12 @@ impl PipewireManager {
                                 }
                                 let _ = self.worker_sender.send(TransientChange).await;
                             }
+                            if let Some((input, output)) = self.bridged_filters.remove(&id) {
+                                // Physical node is gone, remove the bridge filters
+                                let _ = self.filter_remove(input).await;
+                                let _ = self.filter_remove(output).await;
+                            }
+
                         }
                         PipewireReceiver::DeviceUsable(id, usable) => {
                             // TODO: I shouldn't need to call this anymore
@@ -483,7 +510,7 @@ impl PipewireManager {
 
                                 // Create physical node for attachment
                                 let physical_node = PhysicalDevice {
-                                    id: Ulid::new(),
+                                    id: Ulid::generate(),
 
                                     node_id: id,
                                     name: dev.name.clone(),

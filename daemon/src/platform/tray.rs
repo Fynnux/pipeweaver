@@ -24,7 +24,7 @@ pub async fn spawn_tray(mut shutdown: Stop, sender: Messenger) -> Result<()> {
     let (icon_tx, mut icon_rx) = mpsc::channel(20);
     let icon = TrayIcon::new(icon_tx);
     let handle = icon
-        .disable_dbus_name(true)
+        .disable_dbus_name(ashpd::is_sandboxed())
         .assume_sni_available(true)
         .spawn()
         .await?;
@@ -97,7 +97,7 @@ impl Tray for TrayIcon {
             let (width, height) = img.dimensions();
             let mut data = img.into_rgba8().into_vec();
 
-            for pixel in data.chunks_exact_mut(4) {
+            for pixel in data.as_chunks_mut::<4>().0 {
                 pixel.rotate_right(1) // RGBA to ARGB
             }
 

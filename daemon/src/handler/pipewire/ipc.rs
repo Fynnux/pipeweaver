@@ -1,5 +1,6 @@
 use crate::handler::pipewire::components::application::ApplicationManagement;
 use crate::handler::pipewire::components::defaults::DefaultHandlers;
+use crate::handler::pipewire::components::filters::FilterManagement;
 use crate::handler::pipewire::components::load_profile::LoadProfile;
 use crate::handler::pipewire::components::mute::MuteManager;
 use crate::handler::pipewire::components::node::NodeManagement;
@@ -224,12 +225,12 @@ impl IPCHandler for PipewireManager {
             }
 
             Cmd::AddSourceMuteTarget(id, target) => self
-                .set_source_mute_state(id, target, Muted)
+                .set_source_mute_state(id, target, Muted, true)
                 .await
                 .map(|_| Resp::Ok),
             Cmd::AddSourceMuteTargetByName(name, target) => {
                 if let Some(id) = self.get_node_id_by_name(&name) {
-                    self.set_source_mute_state(id, target, Muted)
+                    self.set_source_mute_state(id, target, Muted, true)
                         .await
                         .map(|_| Resp::Ok)
                 } else {
@@ -238,12 +239,12 @@ impl IPCHandler for PipewireManager {
             }
 
             Cmd::DelSourceMuteTarget(id, target) => self
-                .set_source_mute_state(id, target, Unmuted)
+                .set_source_mute_state(id, target, Unmuted, true)
                 .await
                 .map(|_| Resp::Ok),
             Cmd::DelSourceMuteTargetByName(name, target) => {
                 if let Some(id) = self.get_node_id_by_name(&name) {
-                    self.set_source_mute_state(id, target, Unmuted)
+                    self.set_source_mute_state(id, target, Unmuted, true)
                         .await
                         .map(|_| Resp::Ok)
                 } else {
@@ -412,7 +413,6 @@ impl IPCHandler for PipewireManager {
                 .clear_application_transient_target(id)
                 .await
                 .map(|_| Resp::Ok),
-
             Cmd::SetApplicationVolume(id, volume) => self
                 .set_application_volume(id, volume)
                 .await
@@ -491,6 +491,23 @@ impl IPCHandler for PipewireManager {
 
             Cmd::SetDefaultInput(id) => self.set_default_input(id).await.map(|_| Resp::Ok),
             Cmd::SetDefaultOutput(id) => self.set_default_output(id).await.map(|_| Resp::Ok),
+            Cmd::AddFilterToNode(id, filter) => self
+                .filter_custom_create(id, filter)
+                .await
+                .map(|_| Resp::Ok),
+            Cmd::SetFilterValue(filter, id, value) => self
+                .filter_set_value(filter, id, value)
+                .await
+                .map(|_| Resp::Ok),
+            Cmd::SetFilterValues(filter, values) => self
+                .filter_set_values(filter, values)
+                .await
+                .map(|_| Resp::Ok),
+            Cmd::RemoveFilter(id) => self.filter_custom_remove(id).await.map(|_| Resp::Ok),
+            Cmd::MoveFilter(id, position) => self
+                .filter_custom_move(id, position)
+                .await
+                .map(|_| Resp::Ok),
         }
     }
 }

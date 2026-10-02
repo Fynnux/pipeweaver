@@ -10,11 +10,11 @@ use ulid::Ulid;
 
 impl Profile {
     pub fn base_settings() -> Self {
-        let mic_id = Ulid::new();
-        let system_id = Ulid::new();
-        let browser_id = Ulid::new();
-        let headphones_id = Ulid::new();
-        let chat_mic_id = Ulid::new();
+        let mic_id = Ulid::generate();
+        let system_id = Ulid::generate();
+        let browser_id = Ulid::generate();
+        let headphones_id = Ulid::generate();
+        let chat_mic_id = Ulid::generate();
 
         Self {
             devices: Devices {
@@ -40,6 +40,7 @@ impl Profile {
                             },
                             volumes_linked: Some(1.),
                         },
+                        filters: vec![],
                         sync_with_devices: false,
                         attached_devices: vec![],
                         attached_port_maps: vec![],
@@ -66,6 +67,7 @@ impl Profile {
                                 },
                                 volumes_linked: Some(1.),
                             },
+                            filters: vec![],
                         },
                         VirtualSourceDevice {
                             description: DeviceDescription {
@@ -88,6 +90,7 @@ impl Profile {
                                 },
                                 volumes_linked: Some(1.),
                             },
+                            filters: vec![],
                         },
                     ],
                     device_order: enum_map! {
@@ -109,6 +112,7 @@ impl Profile {
                         mute_state: MuteState::Unmuted,
                         volume: 100,
                         mix: Mix::A,
+                        filters: vec![],
                         attached_devices: vec![],
                         sync_with_devices: false,
                         attached_port_maps: vec![],
@@ -127,6 +131,7 @@ impl Profile {
                         volume: 100,
                         mix: Mix::A,
 
+                        filters: vec![],
                         attached_devices: Default::default(),
                         attached_port_maps: vec![],
                     }],

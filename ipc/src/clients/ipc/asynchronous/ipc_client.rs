@@ -1,0 +1,30 @@
+use crate::client::Client;
+use crate::clients::ipc::{IPCClient, Socket};
+use crate::commands::{DaemonRequest, DaemonResponse, DaemonStatus};
+use anyhow::{Context, Result, anyhow};
+use async_trait::async_trait;
+
+#[async_trait]
+impl Client for IPCClient {
+    async fn send(&mut self, request: &DaemonRequest) -> Result<DaemonResponse> {
+        self.socket
+            .send(request.clone())
+            .await
+            .context("Failed to send a command to the GoXLR daemon process")?;
+
+        self.socket
+            .read()
+            .await
+            .context("Failed to retrieve the command result from the GoXLR daemon process")?
+            .context("Failed to parse the command result from the GoXLR daemon process")
+    }
+
+    async fn get_status(&mut self) -> Result<DaemonStatus> {
+        let status = self.send(&DaemonRequest::GetStatus).await?;
+        match status {
+            DaemonResponse::Status(status) => Ok(status),
+            DaemonResponse::Err(error) => Err(anyhow!("{}", error)),
+            _ => Err(anyhow!("Expected Status response, got {:?}", status)),
+        }
+    }
+}

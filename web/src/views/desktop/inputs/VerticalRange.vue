@@ -16,7 +16,8 @@ export default {
   name: 'VerticalRange',
 
   props: {
-    height: {type: Number, required: true, default: 120},
+    // Height (in px), leave blank to fill parent
+    height: {type: Number, required: false, default: null},
 
     sliderWidth: {type: Number, required: false, default: 32},
 
@@ -35,23 +36,31 @@ export default {
     // Whether the control is disabled
     disabled: {type: Boolean, required: false, default: false},
 
-    // A Unique Identifier for reporting value changes
-    id: {type: String, required: true},
+    // Whether to draw the Meter
+    meter: {type: Boolean, required: false, default: true},
+
+    // A Unique Identifier for reporting value changes. Only required when
+    // meter is enabled, since it's used purely as the meter registration key.
+    id: {type: String, required: false, default: undefined},
 
     // Colours for the thumb and 'active' section, and the unselected colour
     selectedColour: {type: String, required: false, default: '#FFFFFF'},
     deselectedColour: {type: String, required: false, default: '#FFFFFF'},
 
     // The value to report to Screen Readers
-    ariaValue: {type: String, required: true},
-    ariaLabel: {type: String, required: true},
-    ariaDescription: {type: String, required: true}
+    ariaValue: {type: String, required: false, default: ''},
+    ariaLabel: {type: String, required: false, default: ''},
+    ariaDescription: {type: String, required: false, default: ''}
   },
 
   data() {
     return {
       localFieldValue: 0,
       localMeterValue: 0,
+
+      measuredHeight: this.height ?? 0,
+      resizeObserver: undefined,
+      interacting: false,
 
       meterColour: undefined,
       meterLastUpdate: performance.now(),
@@ -150,6 +159,17 @@ export default {
         g.toString(16).padStart(2, "0") +
         b.toString(16).padStart(2, "0")
       );
+    },
+
+    // Fires on first change
+    onNativeInput(e) {
+      this.interacting = true;
+      this.localFieldValue = Number(e.target.value);
+    },
+
+    // Fires on release
+    onNativeChange() {
+      this.interacting = false;
     }
   },
 
@@ -161,13 +181,20 @@ export default {
      * Here we watch for external changes, and update the local value to resync the slider to its new position.
      */
     currentValue: function (newValue) {
+      if (this.interacting) return;
       this.localFieldValue = newValue
     },
   },
 
   computed: {
+    resolvedHeight() {
+      return this.height ?? this.measuredHeight
+    },
     calc_height() {
-      return this.height + 'px'
+      return this.resolvedHeight + 'px'
+    },
+    outerStyle() {
+      return this.height !== null ? {height: this.calc_height} : {}
     },
     calc_width() {
       return this.sliderWidth + 'px'
@@ -197,30 +224,47 @@ export default {
     this.meterColour = this.calcColour(50);
 
     this.localFieldValue = this.currentValue
-    this.meterContext = this.$refs.meter.getContext('2d', {
-      alpha: true,
-      willReadFrequently: false
-    });
 
-    let self = this;
-    websocket_meter.register_callback(this.id, (value) => {
-      self.localMeterValue = value;
-    });
-    meter_scheduler.register(this.drawMeter);
+    if (this.height === null) {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        const size = entries[0].contentRect.height;
+        if (size > 0) this.measuredHeight = size;
+      });
+      this.resizeObserver.observe(this.$el);
+    }
+
+    if (this.meter) {
+      this.meterColour = this.calcColour(95);
+      this.meterContext = this.$refs.meter.getContext('2d', {
+        alpha: true,
+        willReadFrequently: false
+      });
+
+      let self = this;
+      websocket_meter.register_callback(this.id, (value) => {
+        self.localMeterValue = value;
+      });
+      meter_scheduler.register(this.drawMeter);
+    }
   },
 
   beforeUnmount() {
-    meter_scheduler.unregister(this.drawMeter);
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    if (this.meter) {
+      meter_scheduler.unregister(this.drawMeter);
+    }
     this.meterContext = null;
   }
 }
 </script>
 
 <template>
-  <div class="outer">
-    <canvas ref="meter"/>
+  <div class="outer" :style="outerStyle">
+    <canvas v-if="meter" ref="meter"/>
     <input
-      v-model="localFieldValue"
+      :value="localFieldValue"
       :aria-description="ariaDescription"
       :aria-label="ariaLabel"
       :aria-valuetext="ariaValue"
@@ -228,6 +272,8 @@ export default {
       :max="maxValue"
       :min="minValue"
       :step="step"
+      @input="onNativeInput"
+      @change="onNativeChange"
 
       type="range">
 

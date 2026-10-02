@@ -1,32 +1,38 @@
 <script>
-import VerticalRange from '@/views/desktop/inputs/VerticalRange.vue'
+import VerticalRange from "@/views/desktop/inputs/VerticalRange.vue";
 
 export default {
-  name: 'ChannelColumnVolume',
+  name: "ChannelColumnVolume",
 
-  components: {VerticalRange},
+  components: { VerticalRange },
   data() {
     return {
-      localFieldValue: 0
-    }
+      localFieldValue: 0,
+      interacting: false,
+    };
   },
 
   props: {
-    id: {type: String, required: true},
-    height: {type: Number, required: false, default: 440},
-    sliderWidth: {type: Number, required: false, default: 32},
-    currentValue: {type: Number, required: true},
-    colour1: {type: String, default: '#00ffff'},
-    colour2: {type: String, default: '#252927'}
+    id: { type: String, required: true },
+    height: { type: Number, required: false, default: 440 },
+    sliderWidth: { type: Number, required: false, default: 32 },
+    currentValue: { type: Number, required: true },
+    colour1: { type: String, default: "#00ffff" },
+    colour2: { type: String, default: "#252927" },
   },
 
   methods: {
+    input(e) {
+      this.interacting = true;
+      this.localFieldValue = parseInt(e.target.value);
+    },
     change(e) {
-      this.localFieldValue = parseInt(e.target.value)
+      this.localFieldValue = parseInt(e.target.value);
+      this.interacting = false;
     },
     getHeight() {
-      return this.height;
-    }
+      return this.height !== null ? this.height - 10 : null;
+    },
   },
 
   watch: {
@@ -35,24 +41,26 @@ export default {
      * elsewhere (Generally a value change in the Store), localFieldValue is used as a bind between them both.
      *
      * Here we watch for external changes, and update the local value to resync the slider to its new position.
+     * While the user is actively dragging (interacting), external updates are ignored - otherwise a reply for an
+     * earlier position landing mid-drag would jerk the displayed % backwards.
      */
     currentValue: function (newValue) {
-      this.localFieldValue = newValue
-    }
+      if (this.interacting) return;
+      this.localFieldValue = newValue;
+    },
   },
 
   mounted() {
-    this.localFieldValue = this.currentValue
-  }
-}
+    this.localFieldValue = this.currentValue;
+  },
+};
 </script>
 
 <template>
   <div class="range">
-    <div>
+    <div class="slider-wrap">
       <VerticalRange
         :id="id"
-        :change="change"
         :current-value="localFieldValue"
         :deselected-colour="colour2"
         :height="getHeight()"
@@ -63,12 +71,11 @@ export default {
         aria-description=""
         aria-label=""
         aria-value=""
+        @input="input"
         @change="change"
       />
     </div>
   </div>
-
-
 </template>
 
 <style scoped>
@@ -76,6 +83,15 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1;
+  min-height: 0;
 }
 
+.slider-wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
 </style>
