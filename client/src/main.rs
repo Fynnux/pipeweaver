@@ -7,11 +7,12 @@ use pipeweaver_ipc::client::Client;
 use pipeweaver_ipc::clients::ipc::IPCClient;
 use pipeweaver_ipc::clients::web::WebClient;
 use pipeweaver_ipc::commands::{
-    APICommand, DaemonCommand, DaemonRequest, DaemonResponse, PWCommandResponse,
+    APICommand, DaemonCommand, DaemonRequest, DaemonResponse, DaemonStatus, PWCommandResponse,
 };
-use pipeweaver_shared::AppDefinition;
+use pipeweaver_shared::{AppDefinition, FilterProperty, FilterValue};
 use std::path::PathBuf;
 use std::{env, fs};
+use ulid::Ulid;
 
 const APP_NAME: &str = "PipeWeaver";
 const APP_NAME_ID: &str = "pipeweaver";
@@ -25,7 +26,6 @@ async fn main() -> Result<()> {
         Box::new(WebClient::new(format!("{url}/api/command")))
     } else {
         let path = get_socket_path()?;
-
         Box::new(IPCClient::connect(path).await?)
     };
 
@@ -33,13 +33,15 @@ async fn main() -> Result<()> {
     let status = client.get_status().await?;
 
     let msg = cli.command.map(|command| match command {
-        cli::Commands::Node { command } => handle_node_command(command),
-        cli::Commands::App { command } => handle_app_command(command),
-        cli::Commands::Route { command } => handle_route_command(command),
-        cli::Commands::Daemon { command } => handle_daemon_command(command),
+        cli::Commands::Node { command } => handle_node_command(&status, command),
+        cli::Commands::Filter { id, command } => handle_filter_command(&status, id, command),
+        cli::Commands::App { command } => handle_app_command(&status, command),
+        cli::Commands::Route { command } => handle_route_command(&status, command),
+        cli::Commands::Daemon { command } => handle_daemon_command(&status, command),
     });
+
     if let Some(msg) = msg {
-        let response = client.send(&msg).await?;
+        let response = client.send(&msg?).await?;
         match response {
             DaemonResponse::Ok => {}
             DaemonResponse::Err(e) => {
@@ -68,7 +70,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn handle_node_command(cmd: cli::NodeCommands) -> DaemonRequest {
+fn handle_node_command(status: &DaemonStatus, cmd: cli::NodeCommands) -> Result<DaemonRequest> {
     use cli::NodeCommands::*;
     use cli::NodeIdCommands as IdCmd;
     let api_cmd = match cmd {
@@ -76,58 +78,107 @@ fn handle_node_command(cmd: cli::NodeCommands) -> DaemonRequest {
         Edit {
             name: src_name,
             command,
-        } => match command {
-            IdCmd::Rename { name } => APICommand::RenameNodeByName(src_name, name),
-            IdCmd::SetColour { colour } => APICommand::SetNodeColourByName(src_name, colour),
-            IdCmd::Remove => APICommand::RemoveNodeByName(src_name),
-            IdCmd::SetVolume { mix, volume } => {
-                if volume.starts_with('+') || volume.starts_with('-') {
-                    let sign = if volume.starts_with('+') { "up" } else { "down" };
-                    let amt = volume[1..].parse::<u8>().unwrap_or(0);
-                    APICommand::VolumeIntervalByName(src_name, sign.to_string(), amt, mix)
-                } else {
-                    let v = volume.parse::<u8>().unwrap_or(0);
-                    APICommand::SetVolumeByName(src_name, mix, v)
+        } => {
+            let id = get_node_id_by_name(status, &src_name)?;
+            match command {
+                IdCmd::Rename { name } => APICommand::RenameNode(id, name),
+                IdCmd::SetColour { colour } => APICommand::SetNodeColour(id, colour),
+                IdCmd::Remove => APICommand::RemoveNode(id),
+                IdCmd::SetVolume { mix, volume } => {
+                    if volume.starts_with('+') || volume.starts_with('-') {
+                        let sign = if volume.starts_with('+') { "up" } else { "down" };
+                        let amt = volume[1..].parse::<u8>().unwrap_or(0);
+                        APICommand::VolumeIntervalByName(src_name, sign.to_string(), amt, mix)
+                    } else {
+                        let v = volume.parse::<u8>().unwrap_or(0);
+                        APICommand::SetVolumeByName(src_name, mix, v)
+                    }
                 }
+                IdCmd::GetVolume { mix } => APICommand::GetVolumeByName(src_name, mix),
+                IdCmd::VolumeInterval { change, amount, mix } => APICommand::VolumeIntervalByName(src_name, change, amount, mix),
+                IdCmd::SetSourceVolumeLinked { linked } => {
+                    APICommand::SetSourceVolumeLinked(id, linked)
+                }
+                IdCmd::SetTargetMix { mix } => APICommand::SetTargetMix(id, mix),
+                IdCmd::AddSourceMuteTarget { target } => {
+                    APICommand::AddSourceMuteTarget(id, target)
+                }
+                IdCmd::DelSourceMuteTarget { target } => {
+                    APICommand::DelSourceMuteTarget(id, target)
+                }
+                IdCmd::AddMuteTargetNode { target, node } => {
+                    let node = get_node_id_by_name(status, &node)?;
+                    APICommand::AddMuteTargetNode(id, target, node)
+                }
+                IdCmd::DelMuteTargetNode { target, node } => {
+                    let node = get_node_id_by_name(status, &node)?;
+                    APICommand::DelMuteTargetNode(id, target, node)
+                }
+                IdCmd::ClearMuteTargetNodes { target } => {
+                    APICommand::ClearMuteTargetNodes(id, target)
+                }
+                IdCmd::SetTargetMuteState { state } => APICommand::SetTargetMuteState(id, state),
+                IdCmd::AttachPhysicalNode { device } => APICommand::AttachPhysicalNode(id, device),
+                IdCmd::RemovePhysicalNode { index } => APICommand::RemovePhysicalNode(id, index),
+                IdCmd::SetOrderGroup { group } => APICommand::SetOrderGroup(id, group),
+                IdCmd::SetOrder { order } => APICommand::SetOrder(id, order),
             }
-            IdCmd::GetVolume { mix } => APICommand::GetVolumeByName(src_name, mix),
-            IdCmd::VolumeInterval { change, amount, mix } => APICommand::VolumeIntervalByName(src_name, change, amount, mix),
-            IdCmd::SetSourceVolumeLinked { linked } => {
-                APICommand::SetSourceVolumeLinkedByName(src_name, linked)
-            }
-            IdCmd::SetTargetMix { mix } => APICommand::SetTargetMixByName(src_name, mix),
-            IdCmd::AddSourceMuteTarget { target } => {
-                APICommand::AddSourceMuteTargetByName(src_name, target)
-            }
-            IdCmd::DelSourceMuteTarget { target } => {
-                APICommand::DelSourceMuteTargetByName(src_name, target)
-            }
-            IdCmd::AddMuteTargetNode { target, node } => {
-                APICommand::AddMuteTargetNodeByNames(src_name, target, node)
-            }
-            IdCmd::DelMuteTargetNode { target, node } => {
-                APICommand::DelMuteTargetNodeByNames(src_name, target, node)
-            }
-            IdCmd::ClearMuteTargetNodes { target } => {
-                APICommand::ClearMuteTargetNodesByName(src_name, target)
-            }
-            IdCmd::SetTargetMuteState { state } => {
-                APICommand::SetTargetMuteStatesByName(src_name, state)
-            }
-            IdCmd::AttachPhysicalNode { device } => {
-                APICommand::AttachPhysicalNodeByName(src_name, device)
-            }
-            IdCmd::RemovePhysicalNode { index } => {
-                APICommand::RemovePhysicalNodeByName(src_name, index)
-            }
-            IdCmd::SetOrderGroup { group } => APICommand::SetOrderGroupByName(src_name, group),
-            IdCmd::SetOrder { order } => APICommand::SetOrderByName(src_name, order),
-        },
+        }
     };
-    DaemonRequest::Pipewire(api_cmd)
+    Ok(DaemonRequest::Pipewire(api_cmd))
 }
 
-fn handle_app_command(cmd: cli::AppCommands) -> DaemonRequest {
+fn handle_filter_command(
+    status: &DaemonStatus,
+    id: Ulid,
+    cmd: cli::FilterCommands,
+) -> Result<DaemonRequest> {
+    use cli::FilterCommands::*;
+
+    let api_cmd = match cmd {
+        Set { symbol, value } => {
+            // Ok, this is kinda complicated, so we need to find stuff.
+            let Some(config) = status.audio.filter_config.get(&id) else {
+                bail!("Filter not Found");
+            };
+
+            let find = |p: &&FilterProperty| p.symbol == symbol;
+            let Some(prop) = config.parameters.iter().find(find) else {
+                bail!("Symbol not found");
+            };
+
+            let value = match prop.value {
+                FilterValue::Int32(_) => FilterValue::Int32(value.parse()?),
+                FilterValue::Float32(_) => FilterValue::Float32(value.parse()?),
+                FilterValue::UInt8(_) => FilterValue::UInt8(value.parse()?),
+                FilterValue::UInt32(_) => FilterValue::UInt32(value.parse()?),
+                FilterValue::String(_) => FilterValue::String(value.to_string()),
+                FilterValue::Bool(_) => FilterValue::Bool(value.parse()?),
+                FilterValue::Enum(_, _) => {
+                    // We need to find the enum value that matches the label
+                    let Some(enum_def) = &prop.enum_def else {
+                        bail!("No enum definition found for property");
+                    };
+
+                    let key = enum_def
+                        .iter()
+                        .find_map(|(id, label)| if label == &value { Some(id) } else { None });
+
+                    let Some(value) = key else {
+                        bail!("No enum value found for label");
+                    };
+
+                    // Enums are represented as Int32s
+                    FilterValue::Int32(*value as i32)
+                }
+            };
+            APICommand::SetFilterValue(id, prop.id, value)
+        }
+    };
+    Ok(DaemonRequest::Pipewire(api_cmd))
+}
+
+fn handle_app_command(status: &DaemonStatus, cmd: cli::AppCommands) -> Result<DaemonRequest> {
     use cli::AppCommands::*;
     let api_cmd = match cmd {
         SetRoute {
@@ -135,25 +186,32 @@ fn handle_app_command(cmd: cli::AppCommands) -> DaemonRequest {
             process,
             name,
             target,
-        } => APICommand::SetApplicationRouteByName(
-            AppDefinition {
+        } => {
+            let target = get_node_id_by_name(status, &target)?;
+            let definition = AppDefinition {
                 device_type,
                 process,
                 name,
-            },
-            target,
-        ),
+            };
+
+            APICommand::SetApplicationRoute(definition, target)
+        }
         ClearRoute {
             device_type,
             process,
             name,
-        } => APICommand::ClearApplicationRoute(AppDefinition {
-            device_type,
-            process,
-            name,
-        }),
+        } => {
+            let definition = AppDefinition {
+                device_type,
+                process,
+                name,
+            };
+
+            APICommand::ClearApplicationRoute(definition)
+        }
         SetTransientRoute { process_id, target } => {
-            APICommand::SetTransientApplicationRouteByName(process_id, target)
+            let target = get_node_id_by_name(status, &target)?;
+            APICommand::SetTransientApplicationRoute(process_id, target)
         }
         ClearTransientRoute { process_id } => {
             APICommand::ClearTransientApplicationRoute(process_id)
@@ -170,23 +228,31 @@ fn handle_app_command(cmd: cli::AppCommands) -> DaemonRequest {
         }
         SetMute { process_id, muted } => APICommand::SetApplicationMute(process_id, muted),
     };
-    DaemonRequest::Pipewire(api_cmd)
+    Ok(DaemonRequest::Pipewire(api_cmd))
 }
 
-fn handle_route_command(cmd: cli::RouteCommands) -> DaemonRequest {
+fn handle_route_command(status: &DaemonStatus, cmd: cli::RouteCommands) -> Result<DaemonRequest> {
     use cli::RouteCommands::*;
     let api_cmd = match cmd {
         Set {
             source,
             target,
             enabled,
-        } => APICommand::SetRouteByNames(source, target, enabled),
-        Toggle { source, target } => APICommand::ToggleRouteByNames(source, target),
+        } => {
+            let source = get_node_id_by_name(status, &source)?;
+            let target = get_node_id_by_name(status, &target)?;
+            APICommand::SetRoute(source, target, enabled)
+        }
+        Toggle { source, target } => {
+            let source = get_node_id_by_name(status, &source)?;
+            let target = get_node_id_by_name(status, &target)?;
+            APICommand::ToggleRoute(source, target)
+        }
     };
-    DaemonRequest::Pipewire(api_cmd)
+    Ok(DaemonRequest::Pipewire(api_cmd))
 }
 
-fn handle_daemon_command(cmd: cli::DaemonCommands) -> DaemonRequest {
+fn handle_daemon_command(_: &DaemonStatus, cmd: cli::DaemonCommands) -> Result<DaemonRequest> {
     use cli::DaemonCommands::*;
     let daemon_cmd = match cmd {
         SetAutoStart { enabled } => DaemonCommand::SetAutoStart(enabled),
@@ -196,7 +262,7 @@ fn handle_daemon_command(cmd: cli::DaemonCommands) -> DaemonRequest {
         OpenInterface => DaemonCommand::OpenInterface,
         ResetAudio => DaemonCommand::ResetAudio,
     };
-    DaemonRequest::Daemon(daemon_cmd)
+    Ok(DaemonRequest::Daemon(daemon_cmd))
 }
 
 pub fn get_socket_path() -> Result<PathBuf> {
@@ -213,4 +279,30 @@ pub fn get_socket_path() -> Result<PathBuf> {
 
     let socket_path = path.join(format!("{}.socket", APP_NAME_ID));
     Ok(socket_path)
+}
+
+fn get_node_id_by_name(status: &DaemonStatus, name: &str) -> Result<Ulid> {
+    for device in &status.audio.profile.devices.sources.physical_devices {
+        if device.description.name == name {
+            return Ok(device.description.id);
+        }
+    }
+    for device in &status.audio.profile.devices.sources.virtual_devices {
+        if device.description.name == name {
+            return Ok(device.description.id);
+        }
+    }
+    for device in &status.audio.profile.devices.targets.physical_devices {
+        if device.description.name == name {
+            return Ok(device.description.id);
+        }
+    }
+    for device in &status.audio.profile.devices.targets.virtual_devices {
+        if device.description.name == name {
+            return Ok(device.description.id);
+        }
+    }
+
+    // This name wasn't found, so return none
+    bail!("Node name {} not Found", name);
 }

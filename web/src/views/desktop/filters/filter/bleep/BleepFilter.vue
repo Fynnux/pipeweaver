@@ -41,11 +41,6 @@ export default {
   <div style="padding: 10px">
     <FlowLayout>
       <FlowItem width="100%" max-width="500px" min-width="250px" title="Controls">
-        <Field label="Enabled" row>
-          <Toggle :value="getParam('enabled').value.Bool"
-                  @input="setParam('enabled', $event)"/>
-        </Field>
-
         <Field label="Frequency">
           <NumberInput :min="getParam('frequency').min" :max="getParam('frequency').max" :step="1"
                        :value="getDb('frequency')" suffix="Hz"
@@ -60,9 +55,27 @@ export default {
         </Field>
       </FlowItem>
     </FlowLayout>
+    <br/>
+    <br/>
+    <span style="font-size: 18px; font-weight: bold">Usage</span>
+    <hr style="margin-bottom: 10px"/>
+    Enable<br/>
+    <pre>
+      pipeweaver-client filter {{ filterId }} set enabled true
+    </pre>
+
+    <br/><br/>
+    Disable<br/>
+    <pre>
+      pipeweaver-client filter {{ filterId }} set enabled false
+    </pre>
   </div>
 </template>
 
 <style scoped>
-
+pre {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
 </style>
