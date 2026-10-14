@@ -62,8 +62,8 @@ pub enum APICommand {
 
     SetSourceVolume(Ulid, Mix, u8),
     SetTargetVolume(Ulid, u8),
-    GetVolumeByName(String, Option<Mix>),
-    VolumeIntervalByName(String, String, u8, Option<Mix>),
+    GetVolume(Ulid, Option<Mix>),
+    SetVolumeInterval(Ulid, String, u8, Option<Mix>),
     SetVolume(Ulid, Option<Mix>, u8),
 
     SetSourceVolumeLinked(Ulid, bool),

@@ -88,14 +88,14 @@ fn handle_node_command(status: &DaemonStatus, cmd: cli::NodeCommands) -> Result<
                     if volume.starts_with('+') || volume.starts_with('-') {
                         let sign = if volume.starts_with('+') { "up" } else { "down" };
                         let amt = volume[1..].parse::<u8>().unwrap_or(0);
-                        APICommand::VolumeIntervalByName(src_name, sign.to_string(), amt, mix)
+                        APICommand::SetVolumeInterval(id, sign.to_string(), amt, mix)
                     } else {
                         let v = volume.parse::<u8>().unwrap_or(0);
-                        APICommand::SetVolumeByName(src_name, mix, v)
+                        APICommand::SetVolume(id, mix, v)
                     }
                 }
-                IdCmd::GetVolume { mix } => APICommand::GetVolumeByName(src_name, mix),
-                IdCmd::VolumeInterval { change, amount, mix } => APICommand::VolumeIntervalByName(src_name, change, amount, mix),
+                IdCmd::GetVolume { mix } => APICommand::GetVolume(id, mix),
+                IdCmd::VolumeInterval { change, amount, mix } => APICommand::SetVolumeInterval(id, change, amount, mix),
                 IdCmd::SetSourceVolumeLinked { linked } => {
                     APICommand::SetSourceVolumeLinked(id, linked)
                 }
